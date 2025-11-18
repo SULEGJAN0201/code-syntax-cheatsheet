@@ -1475,6 +1475,704 @@ INSERT INTO ... SELECT ... FROM ... (batch)
 
 ---
 
+## ⚠️ Common Performance Anti-Patterns
+
+### 🟢 Beginner: What NOT to Do
+
+**These are the most common mistakes that kill performance:**
+
+### ❌ Anti-Pattern 1: Using Cursors for Row-by-Row Processing
+
+```sql
+-- ❌ BAD: Cursor (extremely slow)
+DECLARE @UserID INT, @Email VARCHAR(255);
+DECLARE user_cursor CURSOR FOR
+    SELECT UserID, Email FROM Users WHERE IsActive = 1;
+
+OPEN user_cursor;
+FETCH NEXT FROM user_cursor INTO @UserID, @Email;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- Process each row one at a time
+    UPDATE Users SET LastProcessed = GETDATE() WHERE UserID = @UserID;
+    FETCH NEXT FROM user_cursor INTO @UserID, @Email;
+END
+
+CLOSE user_cursor;
+DEALLOCATE user_cursor;
+-- Execution: 45,000ms for 10,000 rows
+
+-- ✅ GOOD: Set-based operation
+UPDATE Users
+SET LastProcessed = GETDATE()
+WHERE IsActive = 1;
+-- Execution: 150ms for 10,000 rows (300x FASTER! ⚡)
+```
+
+**Why it's bad**: Cursors process one row at a time (RBAR - Row By Agonizing Row). Set-based operations process all rows at once using SQL Server's optimized engine.
+
+### ❌ Anti-Pattern 2: Scalar Functions in SELECT
+
+```sql
+-- ❌ BAD: Scalar function called for EVERY row
+CREATE FUNCTION dbo.GetCustomerFullName(@CustomerID INT)
+RETURNS VARCHAR(200)
+AS
+BEGIN
+    DECLARE @FullName VARCHAR(200);
+    SELECT @FullName = FirstName + ' ' + LastName
+    FROM Customers WHERE CustomerID = @CustomerID;
+    RETURN @FullName;
+END
+GO
+
+SELECT
+    OrderID,
+    dbo.GetCustomerFullName(CustomerID) AS CustomerName,  -- Function called per row!
+    OrderDate
+FROM Orders;
+-- Execution: 8,500ms for 10,000 rows
+
+-- ✅ GOOD: JOIN directly
+SELECT
+    o.OrderID,
+    c.FirstName + ' ' + c.LastName AS CustomerName,
+    o.OrderDate
+FROM Orders o
+INNER JOIN Customers c ON o.CustomerID = c.CustomerID;
+-- Execution: 45ms for 10,000 rows (189x FASTER! ⚡)
+```
+
+**Why it's bad**: Scalar UDFs cause row-by-row execution, prevent parallelism, and hide execution from query plans.
+
+### ❌ Anti-Pattern 3: SELECT * in Production Code
+
+```sql
+-- ❌ BAD: Returns all 50 columns
+SELECT * FROM Users WHERE City = 'Seattle';
+-- Returns: 500MB of data (50 columns × 10,000 rows)
+-- Network transfer: 2,500ms
+-- Memory: High
+
+-- ✅ GOOD: Select only needed columns
+SELECT UserID, FirstName, LastName, Email FROM Users WHERE City = 'Seattle';
+-- Returns: 40MB of data (4 columns × 10,000 rows)
+-- Network transfer: 200ms (12x FASTER! ⚡)
+-- Memory: Low
+-- Bonus: Can use covering index
+```
+
+**Why it's bad**:
+- Transfers unnecessary data over network
+- Prevents covering indexes
+- Breaks when table schema changes
+- Wastes memory and CPU
+
+### ❌ Anti-Pattern 4: Missing WHERE Clause
+
+```sql
+-- ❌ BAD: No filter, returns ALL rows
+SELECT CustomerID, OrderDate, TotalAmount FROM Orders;
+-- Returns: 10,000,000 rows
+-- Execution: 45,000ms
+-- Crashes application with OutOfMemoryException
+
+-- ✅ GOOD: Always filter
+SELECT CustomerID, OrderDate, TotalAmount
+FROM Orders
+WHERE OrderDate >= DATEADD(DAY, -30, GETDATE());
+-- Returns: 50,000 rows
+-- Execution: 120ms (375x FASTER! ⚡)
+```
+
+**Why it's bad**: Returns millions of rows, consumes memory, crashes applications, kills network.
+
+### ❌ Anti-Pattern 5: GUID as Clustered Index
+
+```sql
+-- ❌ BAD: GUID clustered index (causes fragmentation)
+CREATE TABLE Users (
+    UserID UNIQUEIDENTIFIER PRIMARY KEY CLUSTERED DEFAULT NEWID(),  -- Random GUIDs
+    Email VARCHAR(255),
+    Name VARCHAR(100)
+);
+
+INSERT INTO Users (Email, Name) VALUES ('test@email.com', 'Test');
+-- Each insert goes to random page location
+-- Fragmentation reaches 99% quickly
+-- Index rebuilds take hours
+
+-- ✅ GOOD: Sequential INT identity
+CREATE TABLE Users (
+    UserID INT PRIMARY KEY CLUSTERED IDENTITY(1,1),  -- Sequential integers
+    UserGuid UNIQUEIDENTIFIER DEFAULT NEWID(),       -- Keep GUID if needed
+    Email VARCHAR(255),
+    Name VARCHAR(100)
+);
+-- Each insert goes to end of table
+-- Fragmentation stays < 5%
+-- Insert performance 10x faster
+```
+
+**Why it's bad**: Random GUIDs cause page splits, fragmentation, and slow inserts. If you need GUIDs, use NEWSEQUENTIALID() or make it non-clustered.
+
+### ❌ Anti-Pattern 6: Over-Indexing
+
+```sql
+-- ❌ BAD: Too many indexes (15+ indexes on one table)
+CREATE INDEX IX_Users_FirstName ON Users(FirstName);
+CREATE INDEX IX_Users_LastName ON Users(LastName);
+CREATE INDEX IX_Users_Email ON Users(Email);
+CREATE INDEX IX_Users_Phone ON Users(Phone);
+CREATE INDEX IX_Users_City ON Users(City);
+CREATE INDEX IX_Users_State ON Users(State);
+CREATE INDEX IX_Users_Zip ON Users(Zip);
+CREATE INDEX IX_Users_CreatedDate ON Users(CreatedDate);
+CREATE INDEX IX_Users_ModifiedDate ON Users(ModifiedDate);
+CREATE INDEX IX_Users_IsActive ON Users(IsActive);
+CREATE INDEX IX_Users_Status ON Users(Status);
+-- ... 15 total indexes
+
+-- INSERT performance: 250ms per row (80% is index maintenance!)
+
+-- ✅ GOOD: Consolidate to 5-7 strategic indexes
+CREATE INDEX IX_Users_Email ON Users(Email) INCLUDE (FirstName, LastName);
+CREATE INDEX IX_Users_Name ON Users(LastName, FirstName);
+CREATE INDEX IX_Users_Location ON Users(State, City) INCLUDE (Zip);
+CREATE INDEX IX_Users_DateActive ON Users(CreatedDate, IsActive);
+-- 4 covering indexes handle most queries
+
+-- INSERT performance: 50ms per row (5x FASTER! ⚡)
+```
+
+**Why it's bad**: Each index adds overhead to INSERT/UPDATE/DELETE. More isn't better. **Rule of thumb: 5-7 non-clustered indexes max.**
+
+### ❌ Anti-Pattern 7: No Index Maintenance
+
+```sql
+-- ❌ BAD: Never rebuild indexes
+-- After 6 months:
+-- Fragmentation: 95%
+-- Query performance degraded 10x
+-- Queries that took 100ms now take 1000ms
+
+-- ✅ GOOD: Regular maintenance schedule
+-- Weekly maintenance job:
+ALTER INDEX ALL ON Users REBUILD
+WITH (ONLINE = ON, SORT_IN_TEMPDB = ON);
+
+UPDATE STATISTICS Users WITH FULLSCAN;
+
+-- Result: Fragmentation < 5%, consistent performance
+```
+
+**Why it's bad**: Fragmented indexes cause excessive I/O, slow queries, and wasted storage.
+
+### ❌ Anti-Pattern 8: Using OR in WHERE Clause
+
+```sql
+-- ❌ BAD: OR prevents index usage
+SELECT * FROM Orders
+WHERE CustomerID = 123 OR OrderDate = '2024-01-15';
+-- Execution: Table Scan, 5,500ms
+
+-- ✅ GOOD: UNION ALL (each part can use index)
+SELECT * FROM Orders WHERE CustomerID = 123
+UNION ALL
+SELECT * FROM Orders WHERE OrderDate = '2024-01-15' AND CustomerID <> 123;
+-- Execution: 2 Index Seeks, 35ms (157x FASTER! ⚡)
+```
+
+**Why it's bad**: OR clauses often force table scans. UNION ALL allows each part to use appropriate indexes.
+
+### ❌ Anti-Pattern 9: Implicit Data Type Conversions
+
+```sql
+-- ❌ BAD: Implicit conversion prevents index usage
+-- Table: UserID is INT, but query uses VARCHAR
+SELECT * FROM Users WHERE UserID = '12345';  -- VARCHAR literal
+-- SQL Server converts every UserID to VARCHAR for comparison
+-- Execution: Table Scan, 3,200ms
+
+-- ✅ GOOD: Match data types
+SELECT * FROM Users WHERE UserID = 12345;  -- INT literal
+-- Execution: Index Seek, 2ms (1600x FASTER! ⚡)
+
+-- Check for implicit conversions in execution plan:
+-- Look for CONVERT_IMPLICIT warning
+```
+
+**Why it's bad**: Conversions prevent index usage, cause table scans, and add CPU overhead.
+
+### ❌ Anti-Pattern 10: Not Using Covering Indexes
+
+```sql
+-- ❌ BAD: Index without INCLUDE
+CREATE INDEX IX_Orders_CustomerID ON Orders(CustomerID);
+
+SELECT OrderDate, TotalAmount FROM Orders WHERE CustomerID = 123;
+-- Steps:
+-- 1. Index Seek on IX_Orders_CustomerID (find rows)
+-- 2. Key Lookup to clustered index (get OrderDate, TotalAmount)
+-- 3. Nested Loop Join (combine results)
+-- Execution: 125ms (Key Lookups are expensive!)
+
+-- ✅ GOOD: Covering index with INCLUDE
+CREATE INDEX IX_Orders_CustomerID ON Orders(CustomerID)
+INCLUDE (OrderDate, TotalAmount);
+
+SELECT OrderDate, TotalAmount FROM Orders WHERE CustomerID = 123;
+-- Steps:
+-- 1. Index Seek on IX_Orders_CustomerID (gets ALL data from index)
+-- Execution: 8ms (15x FASTER! ⚡)
+```
+
+**Why it's bad**: Key Lookups add random I/O. Covering indexes eliminate lookups by including all needed columns.
+
+---
+
+## 🔢 Data Types & Performance Impact
+
+### 🟡 Intermediate: Choosing the Right Data Types
+
+**Data type choices significantly impact storage, memory, and query performance.**
+
+### VARCHAR vs NVARCHAR
+
+```sql
+-- NVARCHAR: Unicode, 2 bytes per character
+CREATE TABLE Users_Unicode (
+    Name NVARCHAR(100),
+    Email NVARCHAR(255)
+);
+-- Storage per row: 710 bytes (355 characters × 2)
+-- 1 million rows = 710 MB
+
+-- VARCHAR: ASCII, 1 byte per character
+CREATE TABLE Users_ASCII (
+    Name VARCHAR(100),
+    Email VARCHAR(255)
+);
+-- Storage per row: 355 bytes
+-- 1 million rows = 355 MB (50% smaller! 📉)
+
+-- Performance impact:
+-- - NVARCHAR requires 2x more memory
+-- - Buffer pool holds 50% fewer rows
+-- - Index size is 2x larger
+-- - Network transfer is 2x slower
+
+-- ✅ Use NVARCHAR when: Need Unicode (international characters)
+-- ✅ Use VARCHAR when: English/ASCII only (most US applications)
+```
+
+### INT vs BIGINT vs SMALLINT
+
+```sql
+-- Storage sizes:
+-- TINYINT:   1 byte  (0 to 255)
+-- SMALLINT:  2 bytes (-32,768 to 32,767)
+-- INT:       4 bytes (-2 billion to 2 billion)
+-- BIGINT:    8 bytes (-9 quintillion to 9 quintillion)
+
+-- Example: Order quantities
+-- ❌ BAD: Using BIGINT for small numbers
+CREATE TABLE OrderItems (
+    OrderItemID BIGINT,              -- 8 bytes (overkill!)
+    ProductID BIGINT,                -- 8 bytes
+    Quantity BIGINT                  -- 8 bytes (quantities are < 1000!)
+);
+-- Total per row: 24 bytes
+-- 100 million rows = 2.4 GB
+
+-- ✅ GOOD: Right-sized data types
+CREATE TABLE OrderItems (
+    OrderItemID INT,                 -- 4 bytes (up to 2 billion items)
+    ProductID INT,                   -- 4 bytes (up to 2 billion products)
+    Quantity SMALLINT                -- 2 bytes (up to 32,767 - plenty for quantities)
+);
+-- Total per row: 10 bytes
+-- 100 million rows = 1.0 GB (58% smaller! 📉)
+
+-- Performance benefits:
+-- - 2.4x more rows fit in memory
+-- - Indexes are 2.4x smaller
+-- - Queries are 2-3x faster
+```
+
+### DECIMAL Precision
+
+```sql
+-- DECIMAL(p, s): p = total digits, s = decimal places
+-- Storage depends on precision:
+-- DECIMAL(9,2):   5 bytes
+-- DECIMAL(18,2):  9 bytes
+-- DECIMAL(28,2):  13 bytes
+-- DECIMAL(38,2):  17 bytes
+
+-- For money/prices:
+-- ❌ BAD: Excessive precision
+CREATE TABLE Products (
+    Price DECIMAL(38,10)             -- 17 bytes (overkill for prices!)
+);
+
+-- ✅ GOOD: Appropriate precision
+CREATE TABLE Products (
+    Price DECIMAL(10,2)              -- 5 bytes (up to $99,999,999.99)
+);
+-- 3.4x smaller storage and indexes
+
+-- ✅ Even BETTER: Use MONEY or SMALLMONEY
+CREATE TABLE Products (
+    Price MONEY                      -- 8 bytes, optimized for currency
+);
+```
+
+### GUID vs INT for Primary Keys
+
+```sql
+-- Comparison:
+--                  INT            UNIQUEIDENTIFIER (GUID)
+-- Size:            4 bytes        16 bytes (4x larger!)
+-- Generation:      Sequential     Random
+-- Fragmentation:   Low (~2%)      High (~95%)
+-- Insert speed:    Fast           Slow (page splits)
+-- Index size:      Small          Large (4x)
+
+-- ❌ BAD: GUID clustered index
+CREATE TABLE Orders (
+    OrderID UNIQUEIDENTIFIER PRIMARY KEY CLUSTERED DEFAULT NEWID()
+);
+-- Insert 1 million rows: 45 seconds
+-- Index size: 64 MB
+-- Fragmentation: 97%
+
+-- ✅ GOOD: INT clustered index
+CREATE TABLE Orders (
+    OrderID INT PRIMARY KEY CLUSTERED IDENTITY(1,1),
+    OrderGUID UNIQUEIDENTIFIER DEFAULT NEWID()  -- Keep GUID as non-clustered if needed
+);
+-- Insert 1 million rows: 4 seconds (11x FASTER! ⚡)
+-- Index size: 16 MB (4x smaller)
+-- Fragmentation: 2%
+
+-- When to use GUID:
+-- ✅ Distributed systems (merge databases)
+-- ✅ Public-facing IDs (hide sequential numbers)
+-- ✅ Offline data sync
+-- But make it non-clustered or use NEWSEQUENTIALID()
+```
+
+### Date/Time Types
+
+```sql
+-- Storage and range:
+-- DATE:        3 bytes  (0001-01-01 to 9999-12-31)
+-- DATETIME:    8 bytes  (1753-01-01 to 9999-12-31, 3.33ms precision)
+-- DATETIME2:   6-8 bytes (0001-01-01 to 9999-12-31, 100ns precision)
+-- SMALLDATETIME: 4 bytes (1900-01-01 to 2079-06-06, 1min precision)
+
+-- For dates only (no time):
+-- ❌ BAD: DATETIME for dates
+CREATE TABLE Events (
+    EventDate DATETIME                -- 8 bytes, stores unnecessary time
+);
+
+-- ✅ GOOD: DATE type
+CREATE TABLE Events (
+    EventDate DATE                    -- 3 bytes (2.6x smaller!)
+);
+
+-- For timestamps:
+-- ❌ OK: DATETIME (legacy)
+CREATE TABLE Logs (
+    LogTimestamp DATETIME             -- 8 bytes, 3.33ms precision
+);
+
+-- ✅ BETTER: DATETIME2
+CREATE TABLE Logs (
+    LogTimestamp DATETIME2(3)         -- 7 bytes, 1ms precision
+    -- Or DATETIME2(7) for 100ns precision (8 bytes)
+);
+```
+
+### VARCHAR(MAX) vs VARCHAR(n)
+
+```sql
+-- ❌ BAD: VARCHAR(MAX) for short strings
+CREATE TABLE Users (
+    FirstName VARCHAR(MAX),           -- Stored off-row, pointer overhead
+    LastName VARCHAR(MAX),
+    Email VARCHAR(MAX)
+);
+-- Every access requires extra I/O to fetch off-row data
+
+-- ✅ GOOD: Appropriate size
+CREATE TABLE Users (
+    FirstName VARCHAR(50),            -- Stored in-row, fast access
+    LastName VARCHAR(50),
+    Email VARCHAR(255)
+);
+-- 10-50x faster access
+
+-- Use VARCHAR(MAX) only when:
+-- ✅ Actually need > 8000 characters
+-- ✅ Storing documents, JSON, XML
+-- ✅ Rarely queried columns
+```
+
+### NULL vs NOT NULL Performance
+
+```sql
+-- Nullable columns:
+-- - Add overhead (null bitmap)
+-- - Complicate indexes
+-- - Slower comparisons
+
+-- ❌ BAD: Everything nullable
+CREATE TABLE Products (
+    ProductID INT PRIMARY KEY,
+    Name VARCHAR(100) NULL,
+    Price DECIMAL(10,2) NULL,
+    Stock INT NULL
+);
+
+-- ✅ GOOD: NOT NULL when possible
+CREATE TABLE Products (
+    ProductID INT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    Price DECIMAL(10,2) NOT NULL,
+    Stock INT NOT NULL DEFAULT 0
+);
+-- Benefits:
+-- - Simpler query plans
+-- - No NULL handling overhead
+-- - Smaller indexes
+-- - Faster comparisons
+```
+
+---
+
+## 🆚 Temp Tables vs Table Variables vs CTEs
+
+### 🟡 Intermediate: Choosing the Right Temporary Storage
+
+**Three ways to store temporary data - each has different performance characteristics:**
+
+### Comparison Matrix
+
+| Feature | Temp Tables (#) | Table Variables (@) | CTEs (WITH) |
+|---------|----------------|---------------------|-------------|
+| **Statistics** | ✅ Yes | ❌ No (assumes 1 row) | ✅ Yes |
+| **Indexes** | ✅ Yes (any type) | ⚠️ Limited (PK/UQ only) | ❌ No |
+| **TempDB Usage** | ✅ Yes | ✅ Yes | ❌ No |
+| **Recompile** | ❌ No | ✅ Every time | ❌ No |
+| **Scope** | Session | Batch | Query only |
+| **Transactions** | ✅ Yes | ⚠️ Limited | ✅ Yes |
+| **Best For** | Large sets (>100 rows) | Small sets (<100 rows) | Readability, recursion |
+| **Performance** | Fast | Fast (small), slow (large) | Depends on query |
+
+### 1. Temp Tables (#TempTable)
+
+```sql
+-- ✅ Use temp tables for: Large result sets, multiple operations
+
+-- Create with indexes and statistics
+CREATE TABLE #OrderSummary (
+    CustomerID INT NOT NULL,
+    TotalOrders INT NOT NULL,
+    TotalAmount DECIMAL(18,2) NOT NULL,
+    PRIMARY KEY (CustomerID)
+);
+
+-- Statistics are automatically created
+INSERT INTO #OrderSummary (CustomerID, TotalOrders, TotalAmount)
+SELECT
+    CustomerID,
+    COUNT(*) AS TotalOrders,
+    SUM(TotalAmount) AS TotalAmount
+FROM Orders
+GROUP BY CustomerID;
+
+-- Add additional indexes if needed
+CREATE INDEX IX_TotalAmount ON #OrderSummary(TotalAmount);
+
+-- Query multiple times with good performance
+SELECT * FROM #OrderSummary WHERE TotalAmount > 10000;
+SELECT * FROM #OrderSummary WHERE CustomerID IN (1,2,3);
+
+-- Clean up (optional - automatic at session end)
+DROP TABLE #OrderSummary;
+
+-- Performance: EXCELLENT for large datasets
+-- Example: 100,000 rows → 450ms
+```
+
+**When to use:**
+- ✅ Result set > 100 rows
+- ✅ Need indexes for performance
+- ✅ Querying multiple times
+- ✅ Complex multi-step operations
+- ✅ Need transactions
+
+### 2. Table Variables (@TableVariable)
+
+```sql
+-- ✅ Use table variables for: Small result sets, single use
+
+DECLARE @RecentOrders TABLE (
+    OrderID INT PRIMARY KEY,
+    CustomerID INT,
+    OrderDate DATETIME,
+    TotalAmount DECIMAL(18,2)
+);
+
+-- Insert small dataset
+INSERT INTO @RecentOrders (OrderID, CustomerID, OrderDate, TotalAmount)
+SELECT TOP 50 OrderID, CustomerID, OrderDate, TotalAmount
+FROM Orders
+WHERE OrderDate >= DATEADD(DAY, -7, GETDATE());
+
+-- Query once
+SELECT * FROM @RecentOrders WHERE CustomerID = 123;
+
+-- ⚠️ WARNING: No statistics!
+-- SQL Server assumes @TableVariable has 1 row
+-- Can cause poor execution plans for large datasets
+
+-- Performance: EXCELLENT for small datasets (< 100 rows)
+-- Example: 50 rows → 15ms
+-- Performance: POOR for large datasets (> 1000 rows)
+-- Example: 100,000 rows → 25,000ms (55x slower than temp table!)
+```
+
+**When to use:**
+- ✅ Result set < 100 rows
+- ✅ Simple operations
+- ✅ Single query usage
+- ✅ Don't need transactions
+- ❌ NOT for large datasets
+
+### 3. Common Table Expressions (CTEs)
+
+```sql
+-- ✅ Use CTEs for: Readability, recursion, logical organization
+
+-- Simple CTE (replaces subquery)
+WITH RecentOrders AS (
+    SELECT
+        OrderID,
+        CustomerID,
+        OrderDate,
+        TotalAmount
+    FROM Orders
+    WHERE OrderDate >= DATEADD(DAY, -30, GETDATE())
+)
+SELECT
+    c.CustomerName,
+    COUNT(ro.OrderID) AS OrderCount,
+    SUM(ro.TotalAmount) AS TotalSpent
+FROM Customers c
+JOIN RecentOrders ro ON c.CustomerID = ro.CustomerID
+GROUP BY c.CustomerName;
+
+-- Multiple CTEs for complex logic
+WITH OrderTotals AS (
+    SELECT CustomerID, SUM(TotalAmount) AS TotalSpent
+    FROM Orders
+    GROUP BY CustomerID
+),
+HighValueCustomers AS (
+    SELECT CustomerID, TotalSpent
+    FROM OrderTotals
+    WHERE TotalSpent > 10000
+)
+SELECT
+    c.CustomerName,
+    hvc.TotalSpent
+FROM HighValueCustomers hvc
+JOIN Customers c ON hvc.CustomerID = c.CustomerID;
+
+-- Recursive CTE (hierarchical data)
+WITH EmployeeHierarchy AS (
+    -- Anchor: Top level
+    SELECT EmployeeID, ManagerID, FirstName, 0 AS Level
+    FROM Employees
+    WHERE ManagerID IS NULL
+
+    UNION ALL
+
+    -- Recursive: Each level down
+    SELECT e.EmployeeID, e.ManagerID, e.FirstName, eh.Level + 1
+    FROM Employees e
+    JOIN EmployeeHierarchy eh ON e.ManagerID = eh.EmployeeID
+)
+SELECT * FROM EmployeeHierarchy;
+
+-- Performance: Same as regular query (no temp storage)
+-- CTEs are just query macros - expanded inline
+```
+
+**When to use:**
+- ✅ Improve query readability
+- ✅ Organize complex logic
+- ✅ Recursive queries (org charts, BOMs)
+- ✅ Use result once in same query
+- ❌ NOT for reusing across multiple queries
+
+### Real-World Performance Comparison
+
+```sql
+-- SCENARIO: Process 50,000 order records
+
+-- Option 1: Temp Table
+CREATE TABLE #Orders (OrderID INT PRIMARY KEY, CustomerID INT, Amount DECIMAL(18,2));
+INSERT INTO #Orders SELECT OrderID, CustomerID, TotalAmount FROM Orders WHERE OrderDate = '2024-01-15';
+-- Statistics created automatically
+SELECT COUNT(*) FROM #Orders WHERE Amount > 100;  -- Uses statistics
+-- Time: 450ms (BEST for this scenario ✅)
+
+-- Option 2: Table Variable
+DECLARE @Orders TABLE (OrderID INT PRIMARY KEY, CustomerID INT, Amount DECIMAL(18,2));
+INSERT INTO @Orders SELECT OrderID, CustomerID, TotalAmount FROM Orders WHERE OrderDate = '2024-01-15';
+-- NO statistics - assumes 1 row!
+SELECT COUNT(*) FROM @Orders WHERE Amount > 100;  -- Bad plan
+-- Time: 8,500ms (19x slower ❌)
+
+-- Option 3: CTE
+WITH OrdersCTE AS (
+    SELECT OrderID, CustomerID, TotalAmount AS Amount
+    FROM Orders
+    WHERE OrderDate = '2024-15'
+)
+SELECT COUNT(*) FROM OrdersCTE WHERE Amount > 100;
+-- Time: 380ms (BEST ✅ - no temp storage needed)
+-- But can only use once in this query!
+```
+
+### Decision Flowchart
+
+```
+Need temporary storage?
+├─ Multiple queries on same data?
+│   ├─ Yes → Use TEMP TABLE
+│   └─ No →  Continue...
+├─ Dataset size?
+│   ├─ > 1000 rows → Use TEMP TABLE
+│   ├─ < 100 rows → Use TABLE VARIABLE
+│   └─ Medium → Continue...
+├─ Need indexes?
+│   ├─ Yes → Use TEMP TABLE
+│   └─ No → Use TABLE VARIABLE or CTE
+├─ Readability only (single use)?
+│   └─ Yes → Use CTE
+└─ Recursive query?
+    └─ Yes → Use CTE
+```
+
+---
+
 ## 🔒 Transaction Management & Locking
 
 ### 🟡 Intermediate: Isolation Levels
@@ -1797,6 +2495,645 @@ AS RANGE RIGHT FOR VALUES (1, 2, 3, ...);
 
 -- 4. Consider separate database for large tenant
 ```
+
+### Scenario: Reporting Queries Timing Out
+
+**Problem**: End-of-month reports take 30+ minutes, timing out
+
+**Solution**:
+```sql
+-- 1. Create indexed views for common aggregations
+CREATE VIEW vw_MonthlySales
+WITH SCHEMABINDING
+AS
+SELECT
+    YEAR(OrderDate) AS OrderYear,
+    MONTH(OrderDate) AS OrderMonth,
+    CustomerID,
+    COUNT_BIG(*) AS OrderCount,
+    SUM(TotalAmount) AS TotalRevenue
+FROM dbo.Orders
+GROUP BY YEAR(OrderDate), MONTH(OrderDate), CustomerID;
+
+-- Index the view (materialized)
+CREATE UNIQUE CLUSTERED INDEX IX_MonthlySales
+ON vw_MonthlySales(OrderYear, OrderMonth, CustomerID);
+
+-- Query now returns in seconds instead of minutes!
+SELECT * FROM vw_MonthlySales WHERE OrderYear = 2024;
+-- Before: 45,000ms | After: 120ms (375x faster!)
+
+-- 2. Use columnstore index for analytics
+CREATE NONCLUSTERED COLUMNSTORE INDEX IX_Orders_Columnstore
+ON Orders(OrderDate, CustomerID, ProductID, TotalAmount, Quantity);
+
+-- Analytical queries now 10-100x faster
+SELECT
+    YEAR(OrderDate) AS Year,
+    SUM(TotalAmount) AS Revenue
+FROM Orders
+WHERE OrderDate >= '2020-01-01'
+GROUP BY YEAR(OrderDate);
+-- Before: 8,500ms | After: 180ms (47x faster!)
+
+-- 3. Run reports off read replica
+-- Connection string: ApplicationIntent=ReadOnly
+
+-- 4. Consider pre-aggregating data
+-- Create summary tables updated nightly
+CREATE TABLE MonthlySalesAgg (
+    Year INT,
+    Month INT,
+    CustomerID INT,
+    TotalRevenue DECIMAL(18,2),
+    OrderCount INT,
+    PRIMARY KEY (Year, Month, CustomerID)
+);
+
+-- Update via nightly job
+INSERT INTO MonthlySalesAgg
+SELECT YEAR(OrderDate), MONTH(OrderDate), CustomerID,
+       SUM(TotalAmount), COUNT(*)
+FROM Orders
+WHERE OrderDate >= DATEADD(MONTH, -1, GETDATE())
+GROUP BY YEAR(OrderDate), MONTH(OrderDate), CustomerID;
+```
+
+### Scenario: Slow Application Startup
+
+**Problem**: Application takes 30 seconds to load dashboard on login
+
+**Solution**:
+```sql
+-- PROBLEM: Dashboard loads 15 different widgets with separate queries
+-- Each query: 200-500ms
+-- Total: 15 queries × 300ms = 4,500ms
+
+-- ❌ BAD: Multiple round trips
+SELECT COUNT(*) FROM Orders WHERE Status = 'Pending';      -- 250ms
+SELECT COUNT(*) FROM Orders WHERE Status = 'Processing';   -- 250ms
+SELECT COUNT(*) FROM Orders WHERE Status = 'Completed';    -- 250ms
+SELECT TOP 10 * FROM RecentOrders;                         -- 180ms
+-- ... 11 more queries ...
+-- Total: 4,500ms + network latency
+
+-- ✅ GOOD: Single query with multiple result sets
+-- SQL Server stored procedure
+CREATE PROCEDURE GetDashboardData
+AS
+BEGIN
+    -- Result Set 1: Order counts by status
+    SELECT
+        Status,
+        COUNT(*) AS OrderCount
+    FROM Orders
+    GROUP BY Status;
+
+    -- Result Set 2: Recent orders
+    SELECT TOP 10
+        OrderID, CustomerName, OrderDate, TotalAmount
+    FROM Orders
+    ORDER BY OrderDate DESC;
+
+    -- Result Set 3: Revenue metrics
+    SELECT
+        SUM(CASE WHEN OrderDate >= DATEADD(DAY, -1, GETDATE()) THEN TotalAmount ELSE 0 END) AS Today,
+        SUM(CASE WHEN OrderDate >= DATEADD(DAY, -7, GETDATE()) THEN TotalAmount ELSE 0 END) AS Week,
+        SUM(CASE WHEN OrderDate >= DATEADD(MONTH, -1, GETDATE()) THEN TotalAmount ELSE 0 END) AS Month
+    FROM Orders;
+
+    -- Result Set 4: Top products
+    SELECT TOP 5
+        ProductID,
+        ProductName,
+        SUM(Quantity) AS TotalSold
+    FROM OrderItems
+    GROUP BY ProductID, ProductName
+    ORDER BY SUM(Quantity) DESC;
+END;
+
+-- Execute once: EXEC GetDashboardData;
+-- Total time: 420ms (10x faster!)
+
+-- Add covering index for dashboard queries
+CREATE INDEX IX_Orders_Dashboard
+ON Orders(OrderDate, Status)
+INCLUDE (OrderID, CustomerID, TotalAmount);
+
+-- Now down to: 180ms (25x faster!)
+```
+
+### Scenario: Data Import/ETL Performance
+
+**Problem**: Nightly ETL job takes 6 hours, missing morning reports
+
+**Solution**:
+```sql
+-- ❌ BAD: Row-by-row insert (6 hours for 10M rows)
+WHILE @Counter <= @TotalRows
+BEGIN
+    INSERT INTO TargetTable VALUES (@Col1, @Col2, @Col3);
+    SET @Counter = @Counter + 1;
+END;
+
+-- ✅ GOOD: Bulk insert with optimizations (12 minutes for 10M rows)
+
+-- Step 1: Disable indexes temporarily
+ALTER INDEX ALL ON TargetTable DISABLE;
+
+-- Step 2: Switch to simple recovery model (faster logging)
+ALTER DATABASE YourDB SET RECOVERY SIMPLE;
+
+-- Step 3: Use bulk insert
+BULK INSERT TargetTable
+FROM 'C:\Data\ImportFile.csv'
+WITH (
+    FIRSTROW = 2,
+    FIELDTERMINATOR = ',',
+    ROWTERMINATOR = '\n',
+    TABLOCK,           -- Minimize logging
+    BATCHSIZE = 50000  -- Commit every 50K rows
+);
+
+-- OR use SSIS with Fast Load option
+-- OR use bcp utility
+-- bcp TargetTable in "C:\Data\ImportFile.csv" -S ServerName -T -c -b 50000
+
+-- Step 4: Rebuild indexes
+ALTER INDEX ALL ON TargetTable REBUILD WITH (ONLINE = ON);
+
+-- Step 5: Update statistics
+UPDATE STATISTICS TargetTable WITH FULLSCAN;
+
+-- Step 6: Switch back to full recovery
+ALTER DATABASE YourDB SET RECOVERY FULL;
+
+-- Performance comparison:
+-- Row-by-row: 6 hours (21,600 seconds)
+-- Bulk insert: 12 minutes (720 seconds) = 30x faster!
+
+-- Alternative: Use staging table
+CREATE TABLE StagingTable (/* same structure */);
+
+-- Insert into staging (no indexes, minimal logging)
+BULK INSERT StagingTable FROM 'file.csv' WITH (TABLOCK);
+
+-- Transform and merge
+MERGE TargetTable AS Target
+USING StagingTable AS Source
+ON Target.ID = Source.ID
+WHEN MATCHED THEN UPDATE SET Target.Value = Source.Value
+WHEN NOT MATCHED THEN INSERT VALUES (Source.ID, Source.Value);
+
+-- Staging table approach: 15 minutes for 10M rows
+```
+
+### Scenario: Search Functionality Slow
+
+**Problem**: Product search returns results in 8-15 seconds
+
+**Solution**:
+```sql
+-- ❌ BAD: LIKE with leading wildcard (15,000ms)
+SELECT ProductID, ProductName, Description
+FROM Products
+WHERE ProductName LIKE '%widget%'
+   OR Description LIKE '%widget%';
+-- Cannot use index! Full table scan.
+
+-- ✅ GOOD Solution 1: Full-text search (150ms - 100x faster!)
+
+-- Enable full-text indexing
+CREATE FULLTEXT CATALOG ftCatalog AS DEFAULT;
+
+CREATE FULLTEXT INDEX ON Products(ProductName, Description)
+KEY INDEX PK_Products;
+
+-- Search using full-text
+SELECT ProductID, ProductName, Description
+FROM Products
+WHERE CONTAINS((ProductName, Description), 'widget');
+-- Time: 150ms (100x faster!)
+
+-- Advanced full-text search features
+-- Proximity search
+SELECT * FROM Products
+WHERE CONTAINS(Description, 'wireless NEAR bluetooth');
+
+-- Thesaurus and inflectional forms
+SELECT * FROM Products
+WHERE CONTAINS(ProductName, 'FORMSOF(INFLECTIONAL, run)');
+-- Finds: run, runs, running, ran
+
+-- Weighted search (rank by relevance)
+SELECT
+    ProductID,
+    ProductName,
+    KEY_TBL.RANK
+FROM Products
+INNER JOIN CONTAINSTABLE(Products, (ProductName, Description), 'widget') AS KEY_TBL
+    ON Products.ProductID = KEY_TBL.[KEY]
+ORDER BY KEY_TBL.RANK DESC;
+
+-- ✅ GOOD Solution 2: Indexed computed column (250ms)
+-- For exact prefix matches
+ALTER TABLE Products
+ADD ProductNameUpper AS UPPER(ProductName) PERSISTED;
+
+CREATE INDEX IX_Products_NameUpper
+ON Products(ProductNameUpper);
+
+SELECT ProductID, ProductName
+FROM Products
+WHERE ProductNameUpper LIKE 'WIDGET%';  -- Can use index!
+-- Time: 250ms
+
+-- ✅ GOOD Solution 3: Separate search table (80ms - ultimate performance)
+CREATE TABLE ProductSearch (
+    ProductID INT,
+    SearchText NVARCHAR(MAX),
+    PRIMARY KEY (ProductID)
+);
+
+CREATE FULLTEXT INDEX ON ProductSearch(SearchText)
+KEY INDEX PK_ProductSearch;
+
+-- Populate with denormalized searchable data
+INSERT INTO ProductSearch (ProductID, SearchText)
+SELECT
+    ProductID,
+    ProductName + ' ' + Description + ' ' + Category + ' ' + Brand
+FROM Products;
+
+-- Update trigger to keep in sync
+CREATE TRIGGER trg_Products_Search
+ON Products
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    MERGE ProductSearch AS Target
+    USING inserted AS Source
+    ON Target.ProductID = Source.ProductID
+    WHEN MATCHED THEN
+        UPDATE SET SearchText = Source.ProductName + ' ' + Source.Description
+    WHEN NOT MATCHED THEN
+        INSERT (ProductID, SearchText)
+        VALUES (Source.ProductID, Source.ProductName + ' ' + Source.Description);
+END;
+
+-- Search is now lightning fast!
+SELECT p.ProductID, p.ProductName, p.Price
+FROM ProductSearch ps
+INNER JOIN Products p ON ps.ProductID = p.ProductID
+WHERE CONTAINS(ps.SearchText, 'widget');
+-- Time: 80ms (187x faster!)
+```
+
+### Scenario: Mobile App API Slow Response
+
+**Problem**: Mobile API endpoints return data in 2-5 seconds, users complaining
+
+**Solution**:
+```sql
+-- ❌ BAD: N+1 query problem (5,000ms for 100 orders)
+-- API gets orders, then loops through each to get items
+SELECT * FROM Orders WHERE CustomerID = 123;  -- Returns 100 orders
+-- Then for EACH order:
+FOR EACH order:
+    SELECT * FROM OrderItems WHERE OrderID = @OrderID;  -- 100 queries!
+-- Total: 1 query + 100 queries = 101 round trips = 5,000ms
+
+-- ✅ GOOD: Single query with JOIN (180ms - 28x faster!)
+SELECT
+    o.OrderID,
+    o.OrderDate,
+    o.TotalAmount,
+    oi.ProductID,
+    oi.ProductName,
+    oi.Quantity,
+    oi.Price
+FROM Orders o
+INNER JOIN OrderItems oi ON o.OrderID = oi.OrderID
+WHERE o.CustomerID = 123
+ORDER BY o.OrderDate DESC, oi.ProductID;
+-- Return as hierarchical JSON
+FOR JSON PATH, ROOT('orders');
+
+-- Result example:
+{
+  "orders": [
+    {
+      "OrderID": 1,
+      "OrderDate": "2024-01-15",
+      "TotalAmount": 299.99,
+      "items": [
+        {"ProductID": 5, "ProductName": "Widget", "Quantity": 2, "Price": 149.99}
+      ]
+    }
+  ]
+}
+-- Time: 180ms (28x faster!)
+
+-- ✅ Add covering index for API queries
+CREATE INDEX IX_Orders_Mobile
+ON Orders(CustomerID, OrderDate DESC)
+INCLUDE (OrderID, TotalAmount, Status);
+
+CREATE INDEX IX_OrderItems_Mobile
+ON OrderItems(OrderID)
+INCLUDE (ProductID, ProductName, Quantity, Price);
+
+-- Now: 45ms (111x faster!)
+
+-- ✅ Implement result caching in API
+-- Cache frequently accessed data (e.g., product catalog) for 5-10 minutes
+-- Use Redis or in-memory cache
+
+-- ✅ Pagination for large result sets
+SELECT
+    o.OrderID,
+    o.OrderDate,
+    o.TotalAmount
+FROM Orders o
+WHERE o.CustomerID = 123
+ORDER BY o.OrderDate DESC
+OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY;  -- Page 1
+-- Time: 8ms
+
+-- ✅ Use stored procedure with output caching
+CREATE PROCEDURE GetCustomerOrders
+    @CustomerID INT,
+    @PageSize INT = 20,
+    @PageNumber INT = 1
+AS
+BEGIN
+    SELECT
+        o.OrderID,
+        o.OrderDate,
+        o.TotalAmount,
+        COUNT(*) OVER() AS TotalRecords
+    FROM Orders o
+    WHERE o.CustomerID = @CustomerID
+    ORDER BY o.OrderDate DESC
+    OFFSET (@PageNumber - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY
+    FOR JSON PATH;
+END;
+
+-- Performance summary:
+-- Original N+1 queries: 5,000ms
+-- Single query with JOIN: 180ms (28x faster)
+-- With covering indexes: 45ms (111x faster)
+-- With pagination: 8ms (625x faster!)
+```
+
+---
+
+## 🎴 Quick Reference Cards
+
+### Card 1: Index Type Decision Tree
+
+```
+Need to index a column?
+├─ Primary key?
+│   └─ Use CLUSTERED INDEX (one per table)
+├─ Foreign key?
+│   └─ Use NONCLUSTERED INDEX
+├─ WHERE clause columns?
+│   ├─ High selectivity (>95% unique) → NONCLUSTERED INDEX
+│   ├─ Low selectivity (<10% unique) → FILTERED INDEX
+│   └─ Full-text search needed → FULLTEXT INDEX
+├─ Analytics/reporting queries?
+│   └─ Use COLUMNSTORE INDEX
+├─ Covering frequently used query?
+│   └─ NONCLUSTERED INDEX with INCLUDE columns
+├─ Spatial data (geography/geometry)?
+│   └─ Use SPATIAL INDEX
+└─ XML queries?
+    └─ Use XML INDEX
+```
+
+### Card 2: Query Tuning Checklist
+
+**When a query is slow, check these in order:**
+
+1. **[ ] Execution Plan** - Press Ctrl+M in SSMS, look for:
+   - ❌ Table Scan (bad) → Add index
+   - ❌ Index Scan (often bad) → Add covering index
+   - ✅ Index Seek (good)
+   - ❌ Key Lookup (bad if many) → Add INCLUDE columns
+   - ❌ Sort operator (costly) → Add index on ORDER BY columns
+   - ⚠️ Warnings (yellow exclamation) → Fix immediately
+
+2. **[ ] Statistics**
+   ```sql
+   -- Are they up to date?
+   DBCC SHOW_STATISTICS('TableName', 'IndexName');
+   -- If old: UPDATE STATISTICS TableName;
+   ```
+
+3. **[ ] Missing Indexes**
+   ```sql
+   -- Top 10 missing indexes
+   SELECT TOP 10
+       ROUND(s.avg_user_impact * (s.user_seeks + s.user_scans),0) AS Impact,
+       d.statement AS TableName,
+       d.equality_columns,
+       d.inequality_columns,
+       d.included_columns
+   FROM sys.dm_db_missing_index_details d
+   INNER JOIN sys.dm_db_missing_index_groups g ON d.index_handle = g.index_handle
+   INNER JOIN sys.dm_db_missing_index_group_stats s ON g.index_group_handle = s.group_handle
+   ORDER BY Impact DESC;
+   ```
+
+4. **[ ] Sargable WHERE Clause**
+   ```sql
+   -- ❌ NOT sargable (can't use index)
+   WHERE YEAR(OrderDate) = 2024
+   WHERE UPPER(LastName) = 'SMITH'
+   WHERE Salary * 1.1 > 50000
+
+   -- ✅ Sargable (can use index)
+   WHERE OrderDate >= '2024-01-01' AND OrderDate < '2025-01-01'
+   WHERE LastName = 'Smith'
+   WHERE Salary > 50000 / 1.1
+   ```
+
+5. **[ ] SELECT * vs SELECT columns**
+   ```sql
+   -- ❌ BAD
+   SELECT * FROM LargeTable WHERE ID = 1;
+
+   -- ✅ GOOD (can use covering index)
+   SELECT ID, Name, Email FROM LargeTable WHERE ID = 1;
+   ```
+
+6. **[ ] JOIN Performance**
+   ```sql
+   -- Ensure JOIN columns are indexed
+   -- Both sides of: ON Orders.CustomerID = Customers.ID
+   CREATE INDEX IX_Orders_CustomerID ON Orders(CustomerID);
+   -- CustomerID should be PRIMARY KEY on Customers (already indexed)
+   ```
+
+7. **[ ] Parameter Sniffing**
+   ```sql
+   -- If plan is cached for wrong parameter:
+   EXEC sp_recompile 'StoredProcedureName';
+   -- Or add: OPTION (RECOMPILE) to query
+   ```
+
+### Card 3: Index Maintenance Commands
+
+```sql
+-- Check index fragmentation
+SELECT
+    OBJECT_NAME(ips.object_id) AS TableName,
+    i.name AS IndexName,
+    ips.avg_fragmentation_in_percent,
+    ips.page_count,
+    CASE
+        WHEN ips.avg_fragmentation_in_percent > 30 THEN 'REBUILD'
+        WHEN ips.avg_fragmentation_in_percent > 10 THEN 'REORGANIZE'
+        ELSE 'OK'
+    END AS Action
+FROM sys.dm_db_index_physical_stats(DB_ID(), NULL, NULL, NULL, 'LIMITED') ips
+INNER JOIN sys.indexes i ON ips.object_id = i.object_id AND ips.index_id = i.index_id
+WHERE ips.page_count > 1000  -- Skip small indexes
+ORDER BY ips.avg_fragmentation_in_percent DESC;
+
+-- Reorganize index (online, less resource intensive)
+ALTER INDEX IX_IndexName ON TableName REORGANIZE;
+
+-- Rebuild index (offline by default, more thorough)
+ALTER INDEX IX_IndexName ON TableName REBUILD;
+
+-- Rebuild online (Enterprise Edition)
+ALTER INDEX IX_IndexName ON TableName REBUILD WITH (ONLINE = ON);
+
+-- Rebuild all indexes on table
+ALTER INDEX ALL ON TableName REBUILD;
+
+-- Update statistics
+UPDATE STATISTICS TableName;
+UPDATE STATISTICS TableName WITH FULLSCAN;  -- More accurate
+```
+
+### Card 4: Emergency Performance Triage
+
+**Database is slow RIGHT NOW - do this:**
+
+```sql
+-- 1. Find blocking queries (30 seconds)
+SELECT
+    blocking_session_id,
+    session_id,
+    wait_type,
+    wait_time,
+    wait_resource,
+    SUBSTRING(qt.text, 1, 200) AS QueryText
+FROM sys.dm_exec_requests
+CROSS APPLY sys.dm_exec_sql_text(sql_handle) qt
+WHERE blocking_session_id > 0;
+
+-- Kill blocker if needed: KILL <session_id>;
+
+-- 2. Find long-running queries (30 seconds)
+SELECT TOP 10
+    r.session_id,
+    r.status,
+    r.command,
+    r.total_elapsed_time / 1000.0 AS ElapsedSec,
+    r.cpu_time,
+    r.logical_reads,
+    SUBSTRING(qt.text, 1, 200) AS QueryText
+FROM sys.dm_exec_requests r
+CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) qt
+WHERE r.session_id > 50
+ORDER BY r.total_elapsed_time DESC;
+
+-- 3. Check wait statistics (30 seconds)
+SELECT TOP 10
+    wait_type,
+    wait_time_ms / 1000.0 AS WaitTimeSec,
+    waiting_tasks_count,
+    wait_time_ms / waiting_tasks_count AS AvgWaitMs
+FROM sys.dm_os_wait_stats
+WHERE wait_type NOT LIKE '%SLEEP%'
+  AND wait_type NOT LIKE 'CLR%'
+  AND wait_type NOT LIKE 'XE%'
+ORDER BY wait_time_ms DESC;
+
+-- Common wait types:
+-- PAGEIOLATCH_* = Disk I/O slow (add RAM, faster disks, or indexes)
+-- LCK_* = Locking (enable RCSI, shorten transactions)
+-- CXPACKET = Parallelism (often OK, but investigate if excessive)
+-- SOS_SCHEDULER_YIELD = CPU pressure (scale up CPU)
+
+-- 4. Quick fix: Enable RCSI to reduce blocking (2 minutes)
+ALTER DATABASE YourDB SET READ_COMMITTED_SNAPSHOT ON;
+
+-- 5. Find missing indexes (1 minute)
+SELECT TOP 5
+    ROUND(s.avg_user_impact * s.user_seeks, 0) AS Impact,
+    d.statement AS [Table],
+    d.equality_columns,
+    d.inequality_columns,
+    d.included_columns
+FROM sys.dm_db_missing_index_details d
+INNER JOIN sys.dm_db_missing_index_groups g ON d.index_handle = g.index_handle
+INNER JOIN sys.dm_db_missing_index_group_stats s ON g.index_group_handle = s.group_handle
+ORDER BY Impact DESC;
+```
+
+### Card 5: Data Type Sizing Quick Reference
+
+```sql
+-- INTEGER TYPES
+TINYINT     -- 0 to 255 (1 byte)              Use for: Age, small counts
+SMALLINT    -- -32,768 to 32,767 (2 bytes)    Use for: Year, small IDs
+INT         -- -2.1B to 2.1B (4 bytes)        Use for: Most IDs, quantities
+BIGINT      -- Very large numbers (8 bytes)   Use for: Large sequences only
+
+-- STRING TYPES
+CHAR(n)       -- Fixed length, padded          Use for: Fixed codes (USA, GB)
+VARCHAR(n)    -- Variable, 1 byte/char         Use for: ASCII text
+NCHAR(n)      -- Fixed, Unicode                Use for: Fixed Unicode
+NVARCHAR(n)   -- Variable, 2 bytes/char        Use for: International text
+VARCHAR(MAX)  -- Up to 2GB                     Use for: Large text (rarely)
+
+-- DECIMAL TYPES
+DECIMAL(p,s)  -- p=precision, s=scale
+DECIMAL(18,2) -- Money: -999,999,999,999,999.99 to +999,999,999,999,999.99
+DECIMAL(9,2)  -- Smaller money: -9,999,999.99 to +9,999,999.99
+FLOAT         -- Approximate (8 bytes)          Avoid for money!
+REAL          -- Approximate (4 bytes)          Avoid for money!
+
+-- DATE/TIME TYPES
+DATE          -- Date only (3 bytes)            2024-01-15
+TIME          -- Time only (5 bytes)            14:30:00
+DATETIME      -- Old type (8 bytes)             1753-9999, 3.33ms precision
+DATETIME2     -- New type (6-8 bytes)           0001-9999, 100ns precision ⭐
+DATETIMEOFFSET-- With timezone (10 bytes)      For UTC/timezone
+
+-- OTHER TYPES
+BIT           -- 0 or 1 (1 bit, 1 byte/8 cols) Use for: Boolean flags
+UNIQUEIDENTIFIER -- GUID (16 bytes)            Avoid as clustered PK!
+VARBINARY(n)  -- Binary data                   Use for: Files, images
+```
+
+**Storage Example: 1 Million Rows**
+
+| Data Type | Storage per Row | Total for 1M Rows |
+|-----------|----------------|-------------------|
+| INT | 4 bytes | 4 MB |
+| BIGINT | 8 bytes | 8 MB |
+| VARCHAR(50) | ~10 bytes avg | 10 MB |
+| NVARCHAR(50) | ~20 bytes avg | 20 MB |
+| UNIQUEIDENTIFIER | 16 bytes | 16 MB |
+| DATETIME2 | 6 bytes | 6 MB |
+| DATETIME | 8 bytes | 8 MB |
 
 ---
 
