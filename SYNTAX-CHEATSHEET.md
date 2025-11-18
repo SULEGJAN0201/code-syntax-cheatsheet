@@ -6,27 +6,54 @@
 ---
 
 ## Table of Contents
+
+### 🟢 Basics (Start Here!)
 1. [Variables & Types](#variables--types)
 2. [Console Output / Printing](#console-output--printing)
-3. [Arrays & Collections](#arrays--collections)
-4. [Loops & Iteration](#loops--iteration)
-5. [Functions & Methods](#functions--methods)
-6. [Classes & Objects](#classes--objects)
-7. [Conditionals (If/Else/Switch)](#conditionals)
-8. [String Operations](#string-operations)
-9. [Null Handling](#null-handling)
-10. [Async/Await](#asyncawait)
-11. [Error Handling](#error-handling)
-12. [Array Methods & LINQ](#array-methods--linq)
-13. [Interfaces & Types](#interfaces--types)
-14. [Generics](#generics)
-15. [Destructuring](#destructuring)
-16. [Spread/Rest Operators](#spreadrest-operators)
-17. [Arrow Functions & Lambdas](#arrow-functions--lambdas)
-18. [Date & Time](#date--time)
-19. [JSON Operations](#json-operations)
-20. [File Operations](#file-operations)
-21. [Common Data Structures](#common-data-structures)
+3. [Type Conversion & Parsing](#type-conversion--parsing)
+4. [Operators & Math](#operators--math)
+
+### 🟢 Working with Data
+5. [Arrays & Collections](#arrays--collections)
+6. [String Operations](#string-operations)
+7. [Common Data Structures](#common-data-structures)
+8. [Working with Objects](#working-with-objects)
+
+### 🟡 Control Flow
+9. [Conditionals (If/Else/Switch)](#conditionals)
+10. [Loops & Iteration](#loops--iteration)
+11. [Functions & Methods](#functions--methods)
+12. [Arrow Functions & Lambdas](#arrow-functions--lambdas)
+
+### 🟡 Object-Oriented Programming
+13. [Classes & Objects](#classes--objects)
+14. [Interfaces & Types](#interfaces--types)
+15. [Enums](#enums)
+16. [Generics](#generics)
+
+### 🟡 Advanced Concepts
+17. [Array Methods & LINQ](#array-methods--linq)
+18. [Destructuring](#destructuring)
+19. [Spread/Rest Operators](#spreadrest-operators)
+20. [Null Handling](#null-handling)
+21. [Regular Expressions](#regular-expressions)
+
+### 🔴 Asynchronous Programming
+22. [Async/Await](#asyncawait)
+23. [Promises & Tasks](#promises--tasks)
+24. [HTTP/API Calls](#httpapi-calls)
+
+### 🔴 Modules & I/O
+25. [Modules & Imports](#modules--imports)
+26. [Date & Time](#date--time)
+27. [JSON Operations](#json-operations)
+28. [File Operations](#file-operations)
+29. [Local Storage](#local-storage)
+
+### ⚠️ Error Handling & Best Practices
+30. [Error Handling](#error-handling)
+31. [Common Gotchas & Pitfalls](#common-gotchas--pitfalls)
+32. [Tips & Common Mistakes](#tips--common-mistakes)
 
 ---
 
@@ -1896,6 +1923,1515 @@ Console.WriteLine(string.Join(", ", unique));         // Output: 1, 2, 3, 4
 | For loop | `for (let i = 0; i < 10; i++)` | `for (let i = 0; i < 10; i++)` | `for (int i = 0; i < 10; i++)` |
 | For each | `for (const item of arr)` | `for (const item of arr)` | `foreach (var item in arr)` |
 | While loop | `while (condition)` | `while (condition)` | `while (condition)` |
+
+---
+
+## Type Conversion & Parsing
+
+**What it does**: Convert between different data types (string to number, number to string, etc.)
+
+### String to Number
+
+```javascript
+// JavaScript
+const str = "42";
+
+const num1 = parseInt(str);                           // Output: 42 (integer)
+const num2 = parseFloat("3.14");                      // Output: 3.14 (decimal)
+const num3 = Number("42");                            // Output: 42
+const num4 = +"42";                                   // Output: 42 (shorthand)
+
+console.log(parseInt("42px"));                        // Output: 42 (ignores non-numeric)
+console.log(parseInt("abc"));                         // Output: NaN (Not a Number)
+
+// Check if it's a valid number
+console.log(isNaN("abc"));                            // Output: true
+console.log(isNaN("42"));                             // Output: false
+```
+
+```typescript
+// TypeScript
+const str: string = "42";
+
+const num1: number = parseInt(str);                   // Output: 42
+const num2: number = parseFloat("3.14");              // Output: 3.14
+const num3: number = Number("42");                    // Output: 42
+```
+
+```csharp
+// C#
+var str = "42";
+
+var num1 = int.Parse(str);                            // Output: 42 (throws error if invalid)
+var num2 = double.Parse("3.14");                      // Output: 3.14
+
+// Safe parsing (doesn't throw errors)
+if (int.TryParse("42", out int num3)) {
+    Console.WriteLine(num3);                          // Output: 42
+}
+
+if (int.TryParse("abc", out int num4)) {
+    Console.WriteLine(num4);
+} else {
+    Console.WriteLine("Invalid number");              // Output: Invalid number
+}
+```
+
+### Number to String
+
+```javascript
+// JavaScript
+const num = 42;
+
+const str1 = num.toString();                          // Output: "42"
+const str2 = String(num);                             // Output: "42"
+const str3 = `${num}`;                                // Output: "42" (template literal)
+const str4 = num + "";                                // Output: "42" (concatenation)
+
+// With formatting
+const price = 99.99;
+console.log(price.toFixed(2));                        // Output: "99.99"
+console.log(price.toFixed(0));                        // Output: "100"
+```
+
+```typescript
+// TypeScript
+const num: number = 42;
+
+const str1: string = num.toString();                  // Output: "42"
+const str2: string = String(num);                     // Output: "42"
+```
+
+```csharp
+// C#
+var num = 42;
+
+var str1 = num.ToString();                            // Output: "42"
+var str2 = Convert.ToString(num);                     // Output: "42"
+
+// With formatting
+var price = 99.99;
+Console.WriteLine(price.ToString("F2"));              // Output: "99.99"
+Console.WriteLine(price.ToString("C"));               // Output: "$99.99" (currency)
+```
+
+### Boolean Conversions
+
+```javascript
+// JavaScript
+// Truthy and Falsy values
+console.log(Boolean(1));                              // Output: true
+console.log(Boolean(0));                              // Output: false
+console.log(Boolean(""));                             // Output: false (empty string)
+console.log(Boolean("text"));                         // Output: true
+console.log(Boolean(null));                           // Output: false
+console.log(Boolean(undefined));                      // Output: false
+
+// Common pattern
+const value = userInput || "default";                 // Use default if userInput is falsy
+```
+
+```typescript
+// TypeScript
+const isTrue: boolean = Boolean(1);                   // Output: true
+const isFalse: boolean = Boolean(0);                  // Output: false
+```
+
+```csharp
+// C#
+var bool1 = Convert.ToBoolean(1);                     // Output: True
+var bool2 = Convert.ToBoolean(0);                     // Output: False
+
+// String to boolean
+var bool3 = bool.Parse("true");                       // Output: True
+var bool4 = bool.Parse("false");                      // Output: False
+
+if (bool.TryParse("true", out bool bool5)) {
+    Console.WriteLine(bool5);                         // Output: True
+}
+```
+
+---
+
+## Operators & Math
+
+**What it does**: Perform calculations and comparisons
+
+### Arithmetic Operators
+
+```javascript
+// JavaScript
+const a = 10;
+const b = 3;
+
+console.log(a + b);                                   // Output: 13 (addition)
+console.log(a - b);                                   // Output: 7 (subtraction)
+console.log(a * b);                                   // Output: 30 (multiplication)
+console.log(a / b);                                   // Output: 3.333... (division)
+console.log(a % b);                                   // Output: 1 (remainder/modulo)
+console.log(a ** b);                                  // Output: 1000 (power: 10^3)
+
+// Increment/Decrement
+let count = 5;
+count++;                                              // count = 6
+count--;                                              // count = 5
+```
+
+```typescript
+// TypeScript
+const a: number = 10;
+const b: number = 3;
+
+console.log(a + b);                                   // Output: 13
+console.log(a % b);                                   // Output: 1
+console.log(a ** b);                                  // Output: 1000
+```
+
+```csharp
+// C#
+var a = 10;
+var b = 3;
+
+Console.WriteLine(a + b);                             // Output: 13
+Console.WriteLine(a - b);                             // Output: 7
+Console.WriteLine(a * b);                             // Output: 30
+Console.WriteLine(a / b);                             // Output: 3 (integer division!)
+Console.WriteLine(a / (double)b);                     // Output: 3.333... (convert to double)
+Console.WriteLine(a % b);                             // Output: 1
+Console.WriteLine(Math.Pow(a, b));                    // Output: 1000
+
+// Increment/Decrement
+var count = 5;
+count++;                                              // count = 6
+count--;                                              // count = 5
+```
+
+### Comparison Operators
+
+```javascript
+// JavaScript
+console.log(5 == "5");                                // Output: true (loose equality)
+console.log(5 === "5");                               // Output: false (strict equality)
+console.log(5 != "5");                                // Output: false
+console.log(5 !== "5");                               // Output: true
+
+console.log(10 > 5);                                  // Output: true
+console.log(10 < 5);                                  // Output: false
+console.log(10 >= 10);                                // Output: true
+console.log(10 <= 5);                                 // Output: false
+```
+
+```typescript
+// TypeScript
+console.log(5 === 5);                                 // Output: true
+console.log(5 !== "5");                               // Output: true (type-safe)
+```
+
+```csharp
+// C#
+Console.WriteLine(5 == 5);                            // Output: True
+Console.WriteLine(5 != 3);                            // Output: True
+Console.WriteLine(10 > 5);                            // Output: True
+Console.WriteLine(10 <= 10);                          // Output: True
+```
+
+### Logical Operators
+
+```javascript
+// JavaScript
+console.log(true && false);                           // Output: false (AND)
+console.log(true || false);                           // Output: true (OR)
+console.log(!true);                                   // Output: false (NOT)
+
+// Combining conditions
+const age = 25;
+const hasLicense = true;
+
+if (age >= 18 && hasLicense) {
+  console.log("Can drive");                           // Output: Can drive
+}
+```
+
+```typescript
+// TypeScript
+const isAdult: boolean = age >= 18 && age < 65;
+const canVote: boolean = age >= 18 || hasPermission;
+const isNotActive: boolean = !isActive;
+```
+
+```csharp
+// C#
+Console.WriteLine(true && false);                     // Output: False
+Console.WriteLine(true || false);                     // Output: True
+Console.WriteLine(!true);                             // Output: False
+
+var age = 25;
+var hasLicense = true;
+
+if (age >= 18 && hasLicense) {
+    Console.WriteLine("Can drive");                   // Output: Can drive
+}
+```
+
+### Math Operations
+
+```javascript
+// JavaScript
+console.log(Math.abs(-5));                            // Output: 5 (absolute value)
+console.log(Math.ceil(4.3));                          // Output: 5 (round up)
+console.log(Math.floor(4.7));                         // Output: 4 (round down)
+console.log(Math.round(4.5));                         // Output: 5 (round nearest)
+console.log(Math.max(1, 5, 3));                       // Output: 5
+console.log(Math.min(1, 5, 3));                       // Output: 1
+console.log(Math.pow(2, 3));                          // Output: 8 (2^3)
+console.log(Math.sqrt(16));                           // Output: 4
+console.log(Math.random());                           // Output: 0.xxx (0 to 1)
+
+// Random number between 1 and 10
+const random = Math.floor(Math.random() * 10) + 1;
+console.log(random);                                  // Output: 1-10
+```
+
+```typescript
+// TypeScript
+const abs: number = Math.abs(-5);                     // Output: 5
+const max: number = Math.max(1, 5, 3);                // Output: 5
+const random: number = Math.random();                 // Output: 0.xxx
+```
+
+```csharp
+// C#
+Console.WriteLine(Math.Abs(-5));                      // Output: 5
+Console.WriteLine(Math.Ceiling(4.3));                 // Output: 5
+Console.WriteLine(Math.Floor(4.7));                   // Output: 4
+Console.WriteLine(Math.Round(4.5));                   // Output: 4 (banker's rounding)
+Console.WriteLine(Math.Max(1, 5));                    // Output: 5
+Console.WriteLine(Math.Min(1, 5));                    // Output: 1
+Console.WriteLine(Math.Pow(2, 3));                    // Output: 8
+Console.WriteLine(Math.Sqrt(16));                     // Output: 4
+
+// Random number
+var random = new Random();
+Console.WriteLine(random.Next(1, 11));                // Output: 1-10 (11 is exclusive)
+Console.WriteLine(random.NextDouble());               // Output: 0.xxx
+```
+
+---
+
+## Working with Objects
+
+**What it does**: Create and manipulate objects (key-value pairs)
+
+### Creating Objects
+
+```javascript
+// JavaScript
+const person = {
+  name: "John",
+  age: 30,
+  city: "NYC"
+};
+
+console.log(person.name);                             // Output: John
+console.log(person["age"]);                           // Output: 30
+
+// Adding properties
+person.email = "john@example.com";
+person["phone"] = "555-1234";
+
+console.log(person);                                  // Output: {name: "John", age: 30, city: "NYC", email: "john@example.com", phone: "555-1234"}
+```
+
+```typescript
+// TypeScript
+interface Person {
+  name: string;
+  age: number;
+  city: string;
+  email?: string;  // Optional
+}
+
+const person: Person = {
+  name: "John",
+  age: 30,
+  city: "NYC"
+};
+
+person.email = "john@example.com";
+```
+
+```csharp
+// C#
+// Using anonymous object
+var person = new {
+    Name = "John",
+    Age = 30,
+    City = "NYC"
+};
+
+Console.WriteLine(person.Name);                       // Output: John
+
+// Using Dictionary for dynamic properties
+var personDict = new Dictionary<string, object> {
+    {"name", "John"},
+    {"age", 30},
+    {"city", "NYC"}
+};
+
+Console.WriteLine(personDict["name"]);                // Output: John
+
+// Adding properties
+personDict["email"] = "john@example.com";
+```
+
+### Object Methods
+
+```javascript
+// JavaScript
+const user = {
+  name: "John",
+  age: 30,
+  city: "NYC"
+};
+
+// Get all keys
+const keys = Object.keys(user);
+console.log(keys);                                    // Output: ["name", "age", "city"]
+
+// Get all values
+const values = Object.values(user);
+console.log(values);                                  // Output: ["John", 30, "NYC"]
+
+// Get key-value pairs
+const entries = Object.entries(user);
+console.log(entries);                                 // Output: [["name", "John"], ["age", 30], ["city", "NYC"]]
+
+// Check if property exists
+console.log("name" in user);                          // Output: true
+console.log(user.hasOwnProperty("name"));             // Output: true
+
+// Copy object (shallow)
+const copy = { ...user };
+const copy2 = Object.assign({}, user);
+
+// Merge objects
+const extra = { email: "john@example.com" };
+const merged = { ...user, ...extra };
+console.log(merged);                                  // Output: {name: "John", age: 30, city: "NYC", email: "john@example.com"}
+
+// Delete property
+delete user.city;
+console.log(user);                                    // Output: {name: "John", age: 30}
+```
+
+```typescript
+// TypeScript
+const user: Record<string, any> = {
+  name: "John",
+  age: 30,
+  city: "NYC"
+};
+
+const keys: string[] = Object.keys(user);
+const values: any[] = Object.values(user);
+const entries: [string, any][] = Object.entries(user);
+```
+
+```csharp
+// C#
+var user = new Dictionary<string, object> {
+    {"name", "John"},
+    {"age", 30},
+    {"city", "NYC"}
+};
+
+// Get all keys
+var keys = user.Keys;
+Console.WriteLine(string.Join(", ", keys));           // Output: name, age, city
+
+// Get all values
+var values = user.Values;
+Console.WriteLine(string.Join(", ", values));         // Output: John, 30, NYC
+
+// Check if property exists
+Console.WriteLine(user.ContainsKey("name"));          // Output: True
+
+// Remove property
+user.Remove("city");
+Console.WriteLine(string.Join(", ", user.Keys));      // Output: name, age
+```
+
+---
+
+## Enums
+
+**What it does**: Define a set of named constants (like days of week, status codes, etc.)
+
+```javascript
+// JavaScript - No built-in enums, use objects
+const Status = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected'
+};
+
+let orderStatus = Status.PENDING;
+console.log(orderStatus);                             // Output: pending
+
+if (orderStatus === Status.APPROVED) {
+  console.log("Order approved!");
+}
+
+// Or use Object.freeze to prevent changes
+const DayOfWeek = Object.freeze({
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+  SUNDAY: 7
+});
+
+console.log(DayOfWeek.MONDAY);                        // Output: 1
+```
+
+```typescript
+// TypeScript - Has real enums
+enum Status {
+  Pending = 'pending',
+  Approved = 'approved',
+  Rejected = 'rejected'
+}
+
+let orderStatus: Status = Status.Pending;
+console.log(orderStatus);                             // Output: pending
+
+if (orderStatus === Status.Approved) {
+  console.log("Order approved!");
+}
+
+// Numeric enums
+enum DayOfWeek {
+  Monday = 1,
+  Tuesday = 2,
+  Wednesday = 3,
+  Thursday = 4,
+  Friday = 5,
+  Saturday = 6,
+  Sunday = 7
+}
+
+console.log(DayOfWeek.Monday);                        // Output: 1
+console.log(DayOfWeek[1]);                            // Output: "Monday" (reverse mapping)
+
+// Auto-incrementing
+enum Color {
+  Red,      // 0
+  Green,    // 1
+  Blue      // 2
+}
+
+console.log(Color.Green);                             // Output: 1
+```
+
+```csharp
+// C#
+enum Status {
+    Pending,
+    Approved,
+    Rejected
+}
+
+var orderStatus = Status.Pending;
+Console.WriteLine(orderStatus);                       // Output: Pending
+
+if (orderStatus == Status.Approved) {
+    Console.WriteLine("Order approved!");
+}
+
+// With explicit values
+enum DayOfWeek {
+    Monday = 1,
+    Tuesday = 2,
+    Wednesday = 3,
+    Thursday = 4,
+    Friday = 5,
+    Saturday = 6,
+    Sunday = 7
+}
+
+Console.WriteLine(DayOfWeek.Monday);                  // Output: Monday
+Console.WriteLine((int)DayOfWeek.Monday);             // Output: 1
+
+// String representation
+Console.WriteLine(DayOfWeek.Monday.ToString());       // Output: "Monday"
+
+// Parse from string
+var day = Enum.Parse<DayOfWeek>("Monday");
+Console.WriteLine(day);                               // Output: Monday
+
+// Get all values
+foreach (var d in Enum.GetValues<DayOfWeek>()) {
+    Console.WriteLine(d);                             // Output: Monday, Tuesday, ...
+}
+```
+
+---
+
+## Regular Expressions
+
+**What it does**: Pattern matching and text manipulation using patterns
+
+### Basic Pattern Matching
+
+```javascript
+// JavaScript
+const text = "My email is john@example.com";
+
+// Create regex
+const emailPattern = /\w+@\w+\.\w+/;
+const emailPattern2 = new RegExp("\\w+@\\w+\\.\\w+");
+
+// Test if pattern exists
+console.log(emailPattern.test(text));                 // Output: true
+
+// Find first match
+const match = text.match(emailPattern);
+console.log(match[0]);                                // Output: john@example.com
+
+// Find all matches (with 'g' flag)
+const text2 = "Emails: john@test.com, jane@test.com";
+const allMatches = text2.match(/\w+@\w+\.\w+/g);
+console.log(allMatches);                              // Output: ["john@test.com", "jane@test.com"]
+
+// Replace
+const censored = text.replace(emailPattern, "[REDACTED]");
+console.log(censored);                                // Output: My email is [REDACTED]
+
+// Common flags
+// g = global (find all)
+// i = case-insensitive
+// m = multiline
+const pattern = /hello/gi;  // Case-insensitive, find all
+```
+
+```typescript
+// TypeScript
+const text: string = "My email is john@example.com";
+const emailPattern: RegExp = /\w+@\w+\.\w+/;
+
+const match: RegExpMatchArray | null = text.match(emailPattern);
+if (match) {
+    console.log(match[0]);                            // Output: john@example.com
+}
+```
+
+```csharp
+// C#
+using System.Text.RegularExpressions;
+
+var text = "My email is john@example.com";
+var emailPattern = @"\w+@\w+\.\w+";  // @ prefix for verbatim string
+
+// Test if pattern exists
+var isMatch = Regex.IsMatch(text, emailPattern);
+Console.WriteLine(isMatch);                           // Output: True
+
+// Find first match
+var match = Regex.Match(text, emailPattern);
+Console.WriteLine(match.Value);                       // Output: john@example.com
+
+// Find all matches
+var text2 = "Emails: john@test.com, jane@test.com";
+var matches = Regex.Matches(text2, emailPattern);
+foreach (Match m in matches) {
+    Console.WriteLine(m.Value);                       // Output: john@test.com, jane@test.com
+}
+
+// Replace
+var censored = Regex.Replace(text, emailPattern, "[REDACTED]");
+Console.WriteLine(censored);                          // Output: My email is [REDACTED]
+
+// With options (flags)
+var pattern = new Regex(@"hello", RegexOptions.IgnoreCase);
+```
+
+### Common Patterns
+
+```javascript
+// JavaScript
+// Email validation
+const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+console.log(email.test("user@example.com"));          // Output: true
+
+// Phone number (US)
+const phone = /^\d{3}-\d{3}-\d{4}$/;
+console.log(phone.test("555-123-4567"));              // Output: true
+
+// URL
+const url = /https?:\/\/[\w\.-]+/;
+console.log(url.test("https://example.com"));         // Output: true
+
+// Only numbers
+const onlyNumbers = /^\d+$/;
+console.log(onlyNumbers.test("12345"));               // Output: true
+
+// Only letters
+const onlyLetters = /^[a-zA-Z]+$/;
+console.log(onlyLetters.test("Hello"));               // Output: true
+
+// Extract numbers from text
+const text = "I have 5 apples and 3 oranges";
+const numbers = text.match(/\d+/g);
+console.log(numbers);                                 // Output: ["5", "3"]
+```
+
+```typescript
+// TypeScript
+const email: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValid: boolean = email.test("user@example.com");
+console.log(isValid);                                 // Output: true
+```
+
+```csharp
+// C#
+// Email validation
+var email = @"^[^\s@]+@[^\s@]+\.[^\s@]+$";
+Console.WriteLine(Regex.IsMatch("user@example.com", email));  // Output: True
+
+// Phone number (US)
+var phone = @"^\d{3}-\d{3}-\d{4}$";
+Console.WriteLine(Regex.IsMatch("555-123-4567", phone));      // Output: True
+
+// Only numbers
+var onlyNumbers = @"^\d+$";
+Console.WriteLine(Regex.IsMatch("12345", onlyNumbers));       // Output: True
+
+// Extract numbers from text
+var text = "I have 5 apples and 3 oranges";
+var numbers = Regex.Matches(text, @"\d+");
+foreach (Match m in numbers) {
+    Console.WriteLine(m.Value);                       // Output: 5, 3
+}
+```
+
+---
+
+## Promises & Tasks
+
+**What it does**: Handle operations that complete in the future (before async/await was common)
+
+### Creating Promises/Tasks
+
+```javascript
+// JavaScript
+// Create a promise
+const myPromise = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    const success = true;
+    if (success) {
+      resolve("Operation succeeded!");
+    } else {
+      reject("Operation failed!");
+    }
+  }, 1000);
+});
+
+// Using the promise
+myPromise
+  .then(result => {
+    console.log(result);                              // Output: Operation succeeded!
+  })
+  .catch(error => {
+    console.log(error);
+  })
+  .finally(() => {
+    console.log("Done!");                             // Output: Done!
+  });
+```
+
+```typescript
+// TypeScript
+const myPromise: Promise<string> = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve("Operation succeeded!");
+  }, 1000);
+});
+
+myPromise
+  .then((result: string) => {
+    console.log(result);                              // Output: Operation succeeded!
+  })
+  .catch((error: any) => {
+    console.log(error);
+  });
+```
+
+```csharp
+// C#
+// Create a task
+public Task<string> MyTaskAsync() {
+    return Task.Run(() => {
+        Thread.Sleep(1000);  // Simulate work
+        var success = true;
+        if (success) {
+            return "Operation succeeded!";
+        } else {
+            throw new Exception("Operation failed!");
+        }
+    });
+}
+
+// Using the task
+MyTaskAsync()
+    .ContinueWith(task => {
+        if (task.IsCompletedSuccessfully) {
+            Console.WriteLine(task.Result);           // Output: Operation succeeded!
+        } else {
+            Console.WriteLine(task.Exception?.Message);
+        }
+    });
+
+// Or with async/await (better)
+try {
+    var result = await MyTaskAsync();
+    Console.WriteLine(result);                        // Output: Operation succeeded!
+} catch (Exception ex) {
+    Console.WriteLine(ex.Message);
+} finally {
+    Console.WriteLine("Done!");                       // Output: Done!
+}
+```
+
+### Promise.all / Task.WhenAll
+
+**What it does**: Run multiple async operations in parallel
+
+```javascript
+// JavaScript
+const promise1 = Promise.resolve(1);
+const promise2 = Promise.resolve(2);
+const promise3 = Promise.resolve(3);
+
+Promise.all([promise1, promise2, promise3])
+  .then(results => {
+    console.log(results);                             // Output: [1, 2, 3]
+  });
+
+// With async/await
+async function runAll() {
+  const results = await Promise.all([
+    fetchUser(),
+    fetchPosts(),
+    fetchComments()
+  ]);
+  console.log(results);  // All three results
+}
+```
+
+```typescript
+// TypeScript
+const promises: Promise<number>[] = [
+  Promise.resolve(1),
+  Promise.resolve(2),
+  Promise.resolve(3)
+];
+
+Promise.all(promises).then((results: number[]) => {
+  console.log(results);                               // Output: [1, 2, 3]
+});
+```
+
+```csharp
+// C#
+var task1 = Task.FromResult(1);
+var task2 = Task.FromResult(2);
+var task3 = Task.FromResult(3);
+
+var results = await Task.WhenAll(task1, task2, task3);
+Console.WriteLine(string.Join(", ", results));        // Output: 1, 2, 3
+
+// With multiple async methods
+var results2 = await Task.WhenAll(
+    FetchUserAsync(),
+    FetchPostsAsync(),
+    FetchCommentsAsync()
+);
+```
+
+---
+
+## HTTP/API Calls
+
+**What it does**: Make requests to web servers/APIs to get or send data
+
+### Fetch API (JavaScript/TypeScript)
+
+```javascript
+// JavaScript
+// GET request
+fetch('https://api.example.com/users')
+  .then(response => response.json())
+  .then(data => {
+    console.log(data);                                // Output: Array of users
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+
+// With async/await (cleaner)
+async function getUsers() {
+  try {
+    const response = await fetch('https://api.example.com/users');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(data);                                // Output: Array of users
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+// POST request
+async function createUser(user) {
+  try {
+    const response = await fetch('https://api.example.com/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(user)
+    });
+
+    const data = await response.json();
+    console.log('Created:', data);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+createUser({ name: 'John', email: 'john@example.com' });
+
+// PUT/PATCH request (update)
+async function updateUser(id, updates) {
+  const response = await fetch(`https://api.example.com/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  });
+  return response.json();
+}
+
+// DELETE request
+async function deleteUser(id) {
+  const response = await fetch(`https://api.example.com/users/${id}`, {
+    method: 'DELETE'
+  });
+  return response.json();
+}
+```
+
+```typescript
+// TypeScript
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+async function getUsers(): Promise<User[]> {
+  try {
+    const response = await fetch('https://api.example.com/users');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: User[] = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+async function createUser(user: Omit<User, 'id'>): Promise<User> {
+  const response = await fetch('https://api.example.com/users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(user)
+  });
+
+  return response.json();
+}
+```
+
+### HttpClient (C#)
+
+```csharp
+// C#
+using System.Net.Http;
+using System.Net.Http.Json;
+
+public class User {
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+}
+
+// GET request
+public async Task<List<User>> GetUsersAsync() {
+    using var client = new HttpClient();
+
+    try {
+        var response = await client.GetAsync("https://api.example.com/users");
+        response.EnsureSuccessStatusCode();
+
+        var users = await response.Content.ReadFromJsonAsync<List<User>>();
+        return users;
+    } catch (HttpRequestException ex) {
+        Console.WriteLine($"Error: {ex.Message}");
+        throw;
+    }
+}
+
+// Shorter version
+public async Task<List<User>> GetUsersAsync() {
+    using var client = new HttpClient();
+    var users = await client.GetFromJsonAsync<List<User>>("https://api.example.com/users");
+    return users;
+}
+
+// POST request
+public async Task<User> CreateUserAsync(User user) {
+    using var client = new HttpClient();
+
+    var response = await client.PostAsJsonAsync("https://api.example.com/users", user);
+    response.EnsureSuccessStatusCode();
+
+    var created = await response.Content.ReadFromJsonAsync<User>();
+    return created;
+}
+
+// PUT request (update)
+public async Task<User> UpdateUserAsync(int id, User user) {
+    using var client = new HttpClient();
+
+    var response = await client.PutAsJsonAsync($"https://api.example.com/users/{id}", user);
+    response.EnsureSuccessStatusCode();
+
+    return await response.Content.ReadFromJsonAsync<User>();
+}
+
+// DELETE request
+public async Task DeleteUserAsync(int id) {
+    using var client = new HttpClient();
+
+    var response = await client.DeleteAsync($"https://api.example.com/users/{id}");
+    response.EnsureSuccessStatusCode();
+}
+
+// With headers
+public async Task<List<User>> GetUsersWithAuthAsync(string token) {
+    using var client = new HttpClient();
+    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+
+    var users = await client.GetFromJsonAsync<List<User>>("https://api.example.com/users");
+    return users;
+}
+```
+
+---
+
+## Modules & Imports
+
+**What it does**: Split code into separate files and import/export functionality
+
+### ES6 Modules (JavaScript/TypeScript)
+
+```javascript
+// JavaScript/TypeScript
+
+// ========== math.js ==========
+// Named exports
+export function add(a, b) {
+  return a + b;
+}
+
+export function subtract(a, b) {
+  return a - b;
+}
+
+export const PI = 3.14159;
+
+// ========== user.js ==========
+// Default export
+export default class User {
+  constructor(name) {
+    this.name = name;
+  }
+}
+
+// Can have both default and named exports
+export function formatUser(user) {
+  return user.name.toUpperCase();
+}
+
+// ========== main.js ==========
+// Import named exports
+import { add, subtract, PI } from './math.js';
+
+console.log(add(5, 3));                               // Output: 8
+console.log(PI);                                      // Output: 3.14159
+
+// Import all as namespace
+import * as math from './math.js';
+
+console.log(math.add(5, 3));                          // Output: 8
+console.log(math.PI);                                 // Output: 3.14159
+
+// Import default export
+import User from './user.js';
+
+const user = new User('John');
+
+// Import both default and named
+import User, { formatUser } from './user.js';
+
+console.log(formatUser(user));                        // Output: JOHN
+
+// Rename imports
+import { add as sum, subtract as diff } from './math.js';
+
+console.log(sum(5, 3));                               // Output: 8
+```
+
+```typescript
+// TypeScript
+
+// ========== math.ts ==========
+export function add(a: number, b: number): number {
+  return a + b;
+}
+
+export const PI: number = 3.14159;
+
+// ========== user.ts ==========
+export default class User {
+  constructor(public name: string) {}
+}
+
+export function formatUser(user: User): string {
+  return user.name.toUpperCase();
+}
+
+// ========== main.ts ==========
+import { add, PI } from './math';
+import User, { formatUser } from './user';
+
+const result: number = add(5, 3);
+const user: User = new User('John');
+```
+
+### C# Using and Namespaces
+
+```csharp
+// C#
+
+// ========== Math.cs ==========
+namespace MyApp.Utilities
+{
+    public static class MathHelper
+    {
+        public static int Add(int a, int b)
+        {
+            return a + b;
+        }
+
+        public static int Subtract(int a, int b)
+        {
+            return a - b;
+        }
+
+        public const double PI = 3.14159;
+    }
+}
+
+// ========== User.cs ==========
+namespace MyApp.Models
+{
+    public class User
+    {
+        public string Name { get; set; }
+
+        public User(string name)
+        {
+            Name = name;
+        }
+    }
+
+    public static class UserHelper
+    {
+        public static string FormatUser(User user)
+        {
+            return user.Name.ToUpper();
+        }
+    }
+}
+
+// ========== Program.cs ==========
+using MyApp.Utilities;
+using MyApp.Models;
+// Or alias
+using MathUtil = MyApp.Utilities.MathHelper;
+
+class Program
+{
+    static void Main()
+    {
+        // Use imported namespaces
+        var result = MathHelper.Add(5, 3);
+        Console.WriteLine(result);                    // Output: 8
+
+        var user = new User("John");
+        var formatted = UserHelper.FormatUser(user);
+        Console.WriteLine(formatted);                 // Output: JOHN
+
+        // Using alias
+        var sum = MathUtil.Add(5, 3);
+    }
+}
+
+// C# 10+ Global usings (in one file)
+global using System;
+global using System.Linq;
+global using MyApp.Utilities;
+```
+
+---
+
+## Local Storage
+
+**What it does**: Store data in the browser (JavaScript/TypeScript only - persists between sessions)
+
+### LocalStorage (JavaScript/TypeScript)
+
+```javascript
+// JavaScript
+
+// Save data
+localStorage.setItem('username', 'John');
+localStorage.setItem('age', '30');
+
+// Save object (must stringify)
+const user = { name: 'John', age: 30 };
+localStorage.setItem('user', JSON.stringify(user));
+
+// Get data
+const username = localStorage.getItem('username');
+console.log(username);                                // Output: John
+
+// Get object (must parse)
+const userStr = localStorage.getItem('user');
+const user2 = JSON.parse(userStr);
+console.log(user2.name);                              // Output: John
+
+// Remove item
+localStorage.removeItem('username');
+
+// Clear all
+localStorage.clear();
+
+// Check if exists
+if (localStorage.getItem('username')) {
+  console.log('Username exists');
+}
+
+// Get number of items
+console.log(localStorage.length);                     // Output: number of items
+
+// Get key by index
+const key = localStorage.key(0);
+console.log(key);                                     // Output: first key name
+```
+
+```typescript
+// TypeScript
+
+interface User {
+  name: string;
+  age: number;
+}
+
+// Save with type safety
+const user: User = { name: 'John', age: 30 };
+localStorage.setItem('user', JSON.stringify(user));
+
+// Get with type safety
+const userStr: string | null = localStorage.getItem('user');
+if (userStr) {
+  const user: User = JSON.parse(userStr);
+  console.log(user.name);                             // Output: John
+}
+
+// Helper functions
+function saveToStorage<T>(key: string, value: T): void {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function getFromStorage<T>(key: string): T | null {
+  const item = localStorage.getItem(key);
+  return item ? JSON.parse(item) : null;
+}
+
+// Usage
+saveToStorage<User>('user', { name: 'John', age: 30 });
+const retrievedUser = getFromStorage<User>('user');
+```
+
+### SessionStorage (Similar but clears when tab closes)
+
+```javascript
+// JavaScript
+
+// Same API as localStorage, but data clears when tab closes
+sessionStorage.setItem('tempData', 'value');
+const temp = sessionStorage.getItem('tempData');
+sessionStorage.removeItem('tempData');
+sessionStorage.clear();
+```
+
+### C# Equivalent (Not browser-based)
+
+```csharp
+// C# - No built-in localStorage (it's a browser feature)
+// But you can use:
+
+// 1. File-based storage
+using System.IO;
+
+public static class LocalStorage
+{
+    private static string GetFilePath(string key)
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(appData, "MyApp", $"{key}.json");
+    }
+
+    public static void SetItem<T>(string key, T value)
+    {
+        var json = JsonSerializer.Serialize(value);
+        var filePath = GetFilePath(key);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+        File.WriteAllText(filePath, json);
+    }
+
+    public static T GetItem<T>(string key)
+    {
+        var filePath = GetFilePath(key);
+        if (!File.Exists(filePath)) return default(T);
+
+        var json = File.ReadAllText(filePath);
+        return JsonSerializer.Deserialize<T>(json);
+    }
+
+    public static void RemoveItem(string key)
+    {
+        var filePath = GetFilePath(key);
+        if (File.Exists(filePath))
+            File.Delete(filePath);
+    }
+}
+
+// Usage
+LocalStorage.SetItem("user", new User { Name = "John", Age = 30 });
+var user = LocalStorage.GetItem<User>("user");
+LocalStorage.RemoveItem("user");
+```
+
+---
+
+## Common Gotchas & Pitfalls
+
+**What it does**: Common mistakes developers make and how to avoid them
+
+### JavaScript/TypeScript Gotchas
+
+```javascript
+// ⚠️ GOTCHA 1: Floating point precision
+console.log(0.1 + 0.2);                               // Output: 0.30000000000004 (NOT 0.3!)
+console.log(0.1 + 0.2 === 0.3);                       // Output: false
+
+// ✅ FIX: Use toFixed() or multiply by 10
+console.log((0.1 + 0.2).toFixed(1));                  // Output: "0.3"
+console.log((0.1 * 10 + 0.2 * 10) / 10);              // Output: 0.3
+
+// ⚠️ GOTCHA 2: == vs ===
+console.log(5 == "5");                                // Output: true (type coercion!)
+console.log(5 === "5");                               // Output: false
+
+console.log(0 == false);                              // Output: true
+console.log("" == false);                             // Output: true
+
+// ✅ FIX: Always use === and !==
+console.log(5 === 5);                                 // Output: true
+
+// ⚠️ GOTCHA 3: Array.sort() doesn't work as expected with numbers
+const numbers = [1, 5, 2, 10, 20];
+numbers.sort();
+console.log(numbers);                                 // Output: [1, 10, 2, 20, 5] (WRONG!)
+
+// ✅ FIX: Provide compare function
+numbers.sort((a, b) => a - b);
+console.log(numbers);                                 // Output: [1, 2, 5, 10, 20]
+
+// ⚠️ GOTCHA 4: map() doesn't mutate, must save result
+const arr = [1, 2, 3];
+arr.map(x => x * 2);                                  // Does nothing!
+console.log(arr);                                     // Output: [1, 2, 3]
+
+// ✅ FIX: Save the result
+const doubled = arr.map(x => x * 2);
+console.log(doubled);                                 // Output: [2, 4, 6]
+
+// ⚠️ GOTCHA 5: forEach() returns undefined
+const result = [1, 2, 3].forEach(x => x * 2);
+console.log(result);                                  // Output: undefined
+
+// ✅ FIX: Use map() if you need a result
+const result2 = [1, 2, 3].map(x => x * 2);
+console.log(result2);                                 // Output: [2, 4, 6]
+
+// ⚠️ GOTCHA 6: Async in forEach doesn't work
+const urls = ['url1', 'url2', 'url3'];
+urls.forEach(async (url) => {
+  await fetch(url);  // Doesn't wait!
+});
+console.log('Done');  // Prints immediately!
+
+// ✅ FIX: Use for...of or Promise.all
+for (const url of urls) {
+  await fetch(url);
+}
+
+// Or
+await Promise.all(urls.map(url => fetch(url)));
+
+// ⚠️ GOTCHA 7: const doesn't make objects immutable
+const obj = { name: 'John' };
+obj.name = 'Jane';  // This works!
+console.log(obj.name);                                // Output: Jane
+
+obj = {};  // ❌ Error: Cannot reassign const
+
+// ✅ FIX: Use Object.freeze() for true immutability
+const frozen = Object.freeze({ name: 'John' });
+frozen.name = 'Jane';  // Silently fails (or error in strict mode)
+console.log(frozen.name);                             // Output: John
+
+// ⚠️ GOTCHA 8: Callback function loses 'this'
+class Counter {
+  constructor() {
+    this.count = 0;
+  }
+
+  increment() {
+    setTimeout(function() {
+      this.count++;  // 'this' is undefined or window!
+    }, 1000);
+  }
+}
+
+// ✅ FIX: Use arrow function
+class Counter {
+  constructor() {
+    this.count = 0;
+  }
+
+  increment() {
+    setTimeout(() => {
+      this.count++;  // 'this' works correctly!
+    }, 1000);
+  }
+}
+```
+
+### C# Gotchas
+
+```csharp
+// ⚠️ GOTCHA 1: Integer division
+var result = 5 / 2;
+Console.WriteLine(result);                            // Output: 2 (NOT 2.5!)
+
+// ✅ FIX: Cast to double
+var result2 = 5 / 2.0;
+Console.WriteLine(result2);                           // Output: 2.5
+
+var result3 = (double)5 / 2;
+Console.WriteLine(result3);                           // Output: 2.5
+
+// ⚠️ GOTCHA 2: String comparison case-sensitivity
+var str1 = "Hello";
+var str2 = "hello";
+Console.WriteLine(str1 == str2);                      // Output: False
+
+// ✅ FIX: Use case-insensitive comparison
+Console.WriteLine(str1.Equals(str2, StringComparison.OrdinalIgnoreCase));  // Output: True
+
+// ⚠️ GOTCHA 3: Null reference exceptions
+string name = null;
+Console.WriteLine(name.Length);                       // ❌ NullReferenceException!
+
+// ✅ FIX: Check for null first
+if (name != null) {
+    Console.WriteLine(name.Length);
+}
+
+// Or use null-conditional operator
+Console.WriteLine(name?.Length);                      // Output: (nothing, no error)
+
+// ⚠️ GOTCHA 4: DateTime is a struct (value type)
+DateTime date = null;                                 // ❌ Error: Cannot be null
+
+// ✅ FIX: Use nullable type
+DateTime? date = null;  // OK
+if (date.HasValue) {
+    Console.WriteLine(date.Value);
+}
+
+// ⚠️ GOTCHA 5: String is immutable
+var str = "Hello";
+str.ToUpper();  // Doesn't change str!
+Console.WriteLine(str);                               // Output: Hello
+
+// ✅ FIX: Reassign the result
+str = str.ToUpper();
+Console.WriteLine(str);                               // Output: HELLO
+
+// ⚠️ GOTCHA 6: Modifying collection while iterating
+var list = new List<int> {1, 2, 3, 4, 5};
+foreach (var item in list) {
+    if (item % 2 == 0) {
+        list.Remove(item);  // ❌ InvalidOperationException!
+    }
+}
+
+// ✅ FIX: Use for loop or create new list
+for (int i = list.Count - 1; i >= 0; i--) {
+    if (list[i] % 2 == 0) {
+        list.RemoveAt(i);
+    }
+}
+
+// Or
+var filtered = list.Where(x => x % 2 != 0).ToList();
+```
 
 ---
 
