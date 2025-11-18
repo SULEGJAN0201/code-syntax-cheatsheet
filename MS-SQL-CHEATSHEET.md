@@ -5,6 +5,58 @@
 
 ---
 
+## ⚡ Quick Reference Card
+
+**Most Common Commands** - Copy and paste these!
+
+```sql
+-- Read data
+SELECT * FROM TableName;
+SELECT Column1, Column2 FROM TableName WHERE Column1 = 'value';
+
+-- Filter and sort
+WHERE Price > 100 AND Category = 'Electronics'
+ORDER BY Price DESC
+TOP 10
+
+-- Join tables (combine data from two tables)
+SELECT c.Name, o.OrderDate
+FROM Customers c
+INNER JOIN Orders o ON c.ID = o.CustomerID
+
+-- Add new data
+INSERT INTO Customers (Name, Email) VALUES ('John', 'john@email.com');
+
+-- Change existing data
+UPDATE Customers SET Email = 'new@email.com' WHERE ID = 5;
+
+-- Remove data
+DELETE FROM Customers WHERE ID = 5;
+
+-- Count and sum
+SELECT COUNT(*) FROM Customers;
+SELECT SUM(Price) FROM Orders;
+
+-- Group data (like Excel pivot)
+SELECT Category, COUNT(*) AS Total
+FROM Products
+GROUP BY Category;
+
+-- Check if value is empty
+WHERE Phone IS NULL
+WHERE Phone IS NOT NULL
+
+-- Pattern matching (find text)
+WHERE Email LIKE '%@gmail.com'  -- Ends with @gmail.com
+WHERE Name LIKE 'A%'             -- Starts with A
+
+-- Date queries
+WHERE OrderDate >= '2024-01-01'
+WHERE OrderDate BETWEEN '2024-01-01' AND '2024-12-31'
+```
+
+---
+
 ## Table of Contents
 
 ### 🟢 Basics (Start Here!)
@@ -63,8 +115,36 @@
 35. [Common Table Expressions (CTE)](#common-table-expressions-cte)
 36. [Window Functions](#window-functions)
 
+### 🔴 More Advanced Features
+37. [Temporary Tables & Variables](#temporary-tables--variables)
+38. [MERGE Statement](#merge-statement)
+39. [OUTPUT Clause](#output-clause)
+40. [CROSS APPLY & OUTER APPLY](#cross-apply--outer-apply)
+41. [PIVOT & UNPIVOT](#pivot--unpivot)
+42. [Dynamic SQL](#dynamic-sql)
+
+### 💡 Practical Patterns
+43. [Pagination with Total Count](#pagination-with-total-count)
+44. [Upsert (Insert or Update)](#upsert-insert-or-update)
+45. [Finding Duplicates](#finding-duplicates)
+46. [Deleting Duplicates](#deleting-duplicates)
+47. [Running Totals & Cumulative Sums](#running-totals--cumulative-sums)
+
+### 🔐 Security & Performance
+48. [SQL Injection Prevention](#sql-injection-prevention)
+49. [Performance Best Practices](#performance-best-practices)
+50. [Troubleshooting Slow Queries](#troubleshooting-slow-queries)
+
+### 📊 Common Business Scenarios
+51. [Inventory Management](#inventory-management)
+52. [Sales Reports](#sales-reports)
+53. [User Activity Tracking](#user-activity-tracking)
+
+### 📖 Quick References
+54. [Type Conversion & Casting](#type-conversion--casting)
+
 ### ⚠️ Common Pitfalls
-37. [Common Mistakes & Gotchas](#common-mistakes--gotchas)
+55. [Common Mistakes & Gotchas](#common-mistakes--gotchas)
 
 ---
 
@@ -1765,6 +1845,1506 @@ SELECT ProductName, Category, Price
 FROM RankedProducts
 WHERE Rank <= 3;
 -- Returns: Top 3 most expensive products in each category
+```
+
+---
+
+## Temporary Tables & Variables
+
+**What it does**: Store data temporarily while your query or procedure runs (like scratch paper for SQL).
+
+```sql
+-- DECLARE variables (store single values)
+DECLARE @CustomerName NVARCHAR(100);  -- Text variable
+DECLARE @OrderCount INT;              -- Number variable
+DECLARE @TotalPrice DECIMAL(10,2);    -- Decimal variable
+
+-- Set variable values
+SET @CustomerName = 'John Doe';
+SET @OrderCount = 5;
+
+-- Or use SELECT to set from query
+SELECT @OrderCount = COUNT(*) FROM Orders WHERE CustomerID = 1;
+
+-- Use variables in queries
+SELECT * FROM Customers WHERE FirstName = @CustomerName;
+PRINT 'Total orders: ' + CAST(@OrderCount AS VARCHAR);
+
+-- Temporary table (starts with #, exists only in your session)
+CREATE TABLE #TempOrders (
+    OrderID INT,
+    CustomerName NVARCHAR(100),
+    TotalAmount DECIMAL(10,2)
+);
+
+-- Add data to temp table
+INSERT INTO #TempOrders
+SELECT OrderID, c.FirstName, TotalAmount
+FROM Orders o
+INNER JOIN Customers c ON o.CustomerID = c.CustomerID;
+
+-- Use temp table like a regular table
+SELECT * FROM #TempOrders WHERE TotalAmount > 100;
+
+-- Temp table is automatically deleted when your session ends
+-- Or manually drop it
+DROP TABLE #TempOrders;
+
+-- Global temp table (starts with ##, shared across all sessions)
+CREATE TABLE ##SharedData (
+    ID INT,
+    Value NVARCHAR(100)
+);
+-- Other users can access ##SharedData too
+-- Deleted when last session using it closes
+
+-- Table variable (like temp table but stored in memory, faster for small data)
+DECLARE @OrdersTable TABLE (
+    OrderID INT,
+    CustomerID INT,
+    TotalAmount DECIMAL(10,2)
+);
+
+-- Insert data
+INSERT INTO @OrdersTable
+SELECT OrderID, CustomerID, TotalAmount FROM Orders WHERE OrderDate >= '2024-01-01';
+
+-- Query it
+SELECT * FROM @OrdersTable WHERE TotalAmount > 500;
+
+-- ⚡ When to use what:
+-- Variables: Single values (name, count, total)
+-- Temp tables (#): Many rows, complex operations, need indexes
+-- Table variables (@): Few rows (<1000), simple operations, faster
+```
+
+---
+
+## MERGE Statement
+
+**What it does**: Insert, update, or delete in ONE statement (also called "upsert" - update or insert).
+
+```sql
+-- Simple explanation: If record exists, update it. If not, insert it.
+
+-- Example: Update product prices or add new products
+MERGE INTO Products AS Target                    -- Table we're updating
+USING NewProductPrices AS Source                 -- Table with new data
+ON Target.ProductID = Source.ProductID           -- How to match records
+
+-- When we find a match, update the price
+WHEN MATCHED THEN
+    UPDATE SET Target.Price = Source.Price
+
+-- When no match (new product), insert it
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (ProductID, ProductName, Price)
+    VALUES (Source.ProductID, Source.ProductName, Source.Price)
+
+-- Optional: Delete products not in source
+WHEN NOT MATCHED BY SOURCE THEN
+    DELETE;
+
+-- Real-world example: Sync customer data
+MERGE INTO Customers AS Target
+USING ImportedCustomers AS Source
+ON Target.Email = Source.Email
+
+WHEN MATCHED THEN
+    UPDATE SET
+        Target.FirstName = Source.FirstName,
+        Target.LastName = Source.LastName,
+        Target.Phone = Source.Phone
+
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (Email, FirstName, LastName, Phone)
+    VALUES (Source.Email, Source.FirstName, Source.LastName, Source.Phone);
+
+-- Simple upsert example with values
+MERGE INTO Products AS Target
+USING (SELECT 1 AS ProductID, 'Laptop' AS Name, 999.99 AS Price) AS Source
+ON Target.ProductID = Source.ProductID
+
+WHEN MATCHED THEN
+    UPDATE SET Target.Price = Source.Price
+WHEN NOT MATCHED THEN
+    INSERT (ProductID, ProductName, Price)
+    VALUES (Source.ProductID, Source.Name, Source.Price);
+-- If ProductID 1 exists, updates price. If not, inserts new product.
+```
+
+---
+
+## OUTPUT Clause
+
+**What it does**: Shows you what was inserted, updated, or deleted (very useful for debugging and getting IDs).
+
+```sql
+-- See what was inserted
+INSERT INTO Customers (FirstName, LastName, Email)
+OUTPUT INSERTED.CustomerID, INSERTED.FirstName, INSERTED.LastName
+VALUES ('Jane', 'Doe', 'jane@email.com');
+-- Returns: The new CustomerID and name that was just inserted
+
+-- Save inserted IDs to a table
+DECLARE @NewIDs TABLE (CustomerID INT, Email NVARCHAR(100));
+
+INSERT INTO Customers (FirstName, LastName, Email)
+OUTPUT INSERTED.CustomerID, INSERTED.Email INTO @NewIDs
+VALUES
+    ('John', 'Smith', 'john@email.com'),
+    ('Mary', 'Johnson', 'mary@email.com');
+
+-- Now you can use the new IDs
+SELECT * FROM @NewIDs;
+
+-- See what was updated (shows old and new values)
+UPDATE Products
+SET Price = Price * 1.1  -- Increase price by 10%
+OUTPUT
+    DELETED.ProductID,       -- DELETED = old values
+    DELETED.Price AS OldPrice,
+    INSERTED.Price AS NewPrice  -- INSERTED = new values
+WHERE Category = 'Electronics';
+-- Returns: ProductID with old and new prices for each updated product
+
+-- See what was deleted
+DELETE FROM Orders
+OUTPUT
+    DELETED.OrderID,
+    DELETED.CustomerID,
+    DELETED.TotalAmount
+WHERE OrderDate < '2020-01-01';
+-- Returns: All the orders that were deleted
+
+-- Practical example: Archive deleted records
+DECLARE @ArchivedOrders TABLE (
+    OrderID INT,
+    CustomerID INT,
+    OrderDate DATETIME,
+    TotalAmount DECIMAL(10,2)
+);
+
+DELETE FROM Orders
+OUTPUT
+    DELETED.OrderID,
+    DELETED.CustomerID,
+    DELETED.OrderDate,
+    DELETED.TotalAmount
+INTO @ArchivedOrders
+WHERE OrderDate < '2020-01-01';
+
+-- Now @ArchivedOrders contains all deleted orders
+SELECT * FROM @ArchivedOrders;
+```
+
+---
+
+## CROSS APPLY & OUTER APPLY
+
+**What it does**: Like a JOIN but can use a function or subquery that references each row (think of it as a "for each row" operation).
+
+```sql
+-- Simple explanation:
+-- CROSS APPLY = INNER JOIN (only rows with matches)
+-- OUTER APPLY = LEFT JOIN (all rows, even without matches)
+
+-- Example: Get top 3 orders for each customer
+
+-- Using CROSS APPLY (only customers with orders)
+SELECT
+    c.FirstName,
+    c.LastName,
+    TopOrders.OrderID,
+    TopOrders.OrderDate,
+    TopOrders.TotalAmount
+FROM Customers c
+CROSS APPLY (
+    SELECT TOP 3 OrderID, OrderDate, TotalAmount
+    FROM Orders o
+    WHERE o.CustomerID = c.CustomerID  -- For THIS customer
+    ORDER BY OrderDate DESC
+) AS TopOrders;
+-- Returns: Each customer with their 3 most recent orders
+
+-- Using OUTER APPLY (includes customers with no orders)
+SELECT
+    c.FirstName,
+    c.LastName,
+    TopOrders.OrderID,
+    TopOrders.OrderDate,
+    TopOrders.TotalAmount
+FROM Customers c
+OUTER APPLY (
+    SELECT TOP 3 OrderID, OrderDate, TotalAmount
+    FROM Orders o
+    WHERE o.CustomerID = c.CustomerID
+    ORDER BY OrderDate DESC
+) AS TopOrders;
+-- Returns: ALL customers, with their orders if they have any (NULL if no orders)
+
+-- Practical example: Split comma-separated values
+DECLARE @Data TABLE (ID INT, Tags NVARCHAR(100));
+INSERT INTO @Data VALUES
+    (1, 'red,blue,green'),
+    (2, 'yellow,orange'),
+    (3, 'purple');
+
+SELECT
+    d.ID,
+    Tag.value AS Tag
+FROM @Data d
+CROSS APPLY STRING_SPLIT(d.Tags, ',') AS Tag;
+-- Returns:
+-- 1, red
+-- 1, blue
+-- 1, green
+-- 2, yellow
+-- 2, orange
+-- 3, purple
+
+-- Using a table-valued function
+CREATE FUNCTION GetCustomerOrders(@CustomerID INT)
+RETURNS TABLE AS RETURN
+    SELECT OrderID, OrderDate, TotalAmount
+    FROM Orders
+    WHERE CustomerID = @CustomerID;
+GO
+
+SELECT
+    c.FirstName,
+    o.OrderID,
+    o.TotalAmount
+FROM Customers c
+CROSS APPLY dbo.GetCustomerOrders(c.CustomerID) o;
+-- Returns: All customers with their orders
+```
+
+---
+
+## PIVOT & UNPIVOT
+
+**What it does**: PIVOT turns rows into columns (like Excel pivot table). UNPIVOT does the opposite.
+
+```sql
+-- PIVOT - turn rows into columns
+-- Example: Sales by month as columns
+
+-- Sample data:
+-- Month   | SalesAmount
+-- January | 1000
+-- February| 1500
+-- March   | 2000
+
+SELECT *
+FROM (
+    SELECT Month, SalesAmount FROM MonthlySales
+) AS SourceTable
+PIVOT (
+    SUM(SalesAmount)           -- What to calculate
+    FOR Month                  -- Column to spread out
+    IN ([January], [February], [March])  -- New column names
+) AS PivotTable;
+-- Result:
+-- January | February | March
+-- 1000    | 1500     | 2000
+
+-- Practical example: Product sales by category
+SELECT *
+FROM (
+    SELECT Category, ProductName, Price
+    FROM Products
+) AS SourceTable
+PIVOT (
+    COUNT(ProductName)
+    FOR Category
+    IN ([Electronics], [Clothing], [Books])
+) AS PivotTable;
+-- Returns: Count of products in each category as columns
+
+-- UNPIVOT - turn columns back into rows
+-- Example: Quarterly sales as columns → rows
+
+-- Sample data:
+-- Product | Q1   | Q2   | Q3   | Q4
+-- Laptop  | 1000 | 1500 | 2000 | 2500
+
+SELECT Product, Quarter, Sales
+FROM QuarterlySales
+UNPIVOT (
+    Sales               -- New column for values
+    FOR Quarter         -- New column for old column names
+    IN (Q1, Q2, Q3, Q4) -- Columns to unpivot
+) AS UnpivotTable;
+-- Result:
+-- Laptop | Q1 | 1000
+-- Laptop | Q2 | 1500
+-- Laptop | Q3 | 2000
+-- Laptop | Q4 | 2500
+
+-- Real-world example: Monthly comparison
+SELECT
+    ProductName,
+    [January] AS Jan,
+    [February] AS Feb,
+    [March] AS Mar
+FROM (
+    SELECT
+        p.ProductName,
+        DATENAME(MONTH, o.OrderDate) AS Month,
+        od.Quantity
+    FROM Products p
+    INNER JOIN OrderDetails od ON p.ProductID = od.ProductID
+    INNER JOIN Orders o ON od.OrderID = o.OrderID
+    WHERE YEAR(o.OrderDate) = 2024
+) AS SourceData
+PIVOT (
+    SUM(Quantity)
+    FOR Month IN ([January], [February], [March])
+) AS PivotData;
+-- Returns: Each product with total quantity sold per month
+```
+
+---
+
+## Dynamic SQL
+
+**What it does**: Build and run SQL queries as text (useful when you don't know table/column names ahead of time).
+
+```sql
+-- Simple example: Build query as text and execute it
+DECLARE @SQL NVARCHAR(MAX);
+SET @SQL = 'SELECT * FROM Customers WHERE Country = ''USA''';
+EXEC(@SQL);
+-- Same as: SELECT * FROM Customers WHERE Country = 'USA'
+
+-- Dynamic table name
+DECLARE @TableName NVARCHAR(100) = 'Products';
+DECLARE @SQL NVARCHAR(MAX);
+SET @SQL = 'SELECT * FROM ' + @TableName;
+EXEC(@SQL);
+-- Runs: SELECT * FROM Products
+
+-- ⚠️ DANGEROUS! Never use user input directly (SQL injection risk!)
+-- BAD:
+DECLARE @UserInput NVARCHAR(100) = 'USA''; DELETE FROM Customers; --';
+SET @SQL = 'SELECT * FROM Customers WHERE Country = ''' + @UserInput + '''';
+EXEC(@SQL);  -- DISASTER! This deletes all customers!
+
+-- ✅ SAFE: Use sp_executesql with parameters
+DECLARE @Country NVARCHAR(50) = 'USA';
+DECLARE @SQL NVARCHAR(MAX);
+SET @SQL = 'SELECT * FROM Customers WHERE Country = @Country';
+EXEC sp_executesql @SQL, N'@Country NVARCHAR(50)', @Country;
+-- Safe! @Country is treated as a value, not SQL code
+
+-- Practical example: Dynamic search
+DECLARE @SearchColumn NVARCHAR(100) = 'LastName';
+DECLARE @SearchValue NVARCHAR(100) = 'Smith';
+DECLARE @SQL NVARCHAR(MAX);
+
+SET @SQL = 'SELECT * FROM Customers WHERE ' + @SearchColumn + ' = @Value';
+EXEC sp_executesql @SQL, N'@Value NVARCHAR(100)', @SearchValue;
+-- Searches the column specified by user
+
+-- Build complex query
+DECLARE @Columns NVARCHAR(MAX) = 'FirstName, LastName, Email';
+DECLARE @Table NVARCHAR(100) = 'Customers';
+DECLARE @Condition NVARCHAR(MAX) = 'Country = @Country';
+DECLARE @Country NVARCHAR(50) = 'USA';
+
+SET @SQL = 'SELECT ' + @Columns + ' FROM ' + @Table + ' WHERE ' + @Condition;
+EXEC sp_executesql @SQL, N'@Country NVARCHAR(50)', @Country;
+
+-- When to use dynamic SQL:
+-- ✅ Report builders where columns change
+-- ✅ Admin tools where table names vary
+-- ✅ Complex search with optional filters
+-- ❌ Regular queries (slower than normal SQL)
+-- ❌ User input without parameters (security risk!)
+```
+
+---
+
+## Pagination with Total Count
+
+**What it does**: Show page 1, 2, 3... and tell user how many pages total (like Google search results).
+
+```sql
+-- Simple pagination (show 20 items per page)
+DECLARE @PageNumber INT = 1;      -- Which page (1, 2, 3...)
+DECLARE @PageSize INT = 20;       -- Items per page
+
+SELECT *
+FROM Products
+ORDER BY ProductName
+OFFSET (@PageNumber - 1) * @PageSize ROWS  -- Skip previous pages
+FETCH NEXT @PageSize ROWS ONLY;             -- Get current page
+-- Page 1: Rows 1-20
+-- Page 2: Rows 21-40
+-- Page 3: Rows 41-60
+
+-- Pagination WITH total count (one query!)
+DECLARE @PageNumber INT = 2;
+DECLARE @PageSize INT = 20;
+
+SELECT
+    *,
+    COUNT(*) OVER() AS TotalRecords  -- Total count without paging
+FROM Products
+ORDER BY ProductName
+OFFSET (@PageNumber - 1) * @PageSize ROWS
+FETCH NEXT @PageSize ROWS ONLY;
+-- Returns: Page 2 (rows 21-40) AND total count of all products
+
+-- Calculate total pages
+DECLARE @PageNumber INT = 1;
+DECLARE @PageSize INT = 20;
+DECLARE @TotalRecords INT;
+DECLARE @TotalPages INT;
+
+SELECT @TotalRecords = COUNT(*) FROM Products;
+SET @TotalPages = CEILING(@TotalRecords / CAST(@PageSize AS FLOAT));
+
+SELECT
+    *,
+    @TotalRecords AS TotalRecords,
+    @TotalPages AS TotalPages,
+    @PageNumber AS CurrentPage
+FROM Products
+ORDER BY ProductName
+OFFSET (@PageNumber - 1) * @PageSize ROWS
+FETCH NEXT @PageSize ROWS ONLY;
+
+-- Pagination with filtering
+DECLARE @PageNumber INT = 1;
+DECLARE @PageSize INT = 20;
+DECLARE @Category NVARCHAR(50) = 'Electronics';
+
+SELECT
+    *,
+    COUNT(*) OVER() AS TotalRecords
+FROM Products
+WHERE Category = @Category  -- Filter first
+ORDER BY ProductName
+OFFSET (@PageNumber - 1) * @PageSize ROWS
+FETCH NEXT @PageSize ROWS ONLY;
+-- Returns: Page 1 of Electronics only
+```
+
+---
+
+## Upsert (Insert or Update)
+
+**What it does**: If record exists, update it. If not, insert it (handles both cases automatically).
+
+```sql
+-- Method 1: IF EXISTS (simple and clear)
+IF EXISTS (SELECT 1 FROM Products WHERE ProductID = 123)
+BEGIN
+    -- Product exists, update it
+    UPDATE Products
+    SET ProductName = 'Updated Name', Price = 99.99
+    WHERE ProductID = 123;
+END
+ELSE
+BEGIN
+    -- Product doesn't exist, insert it
+    INSERT INTO Products (ProductID, ProductName, Price)
+    VALUES (123, 'Updated Name', 99.99);
+END
+
+-- Method 2: MERGE (one statement, more efficient)
+MERGE INTO Products AS Target
+USING (SELECT 123 AS ProductID, 'Laptop' AS ProductName, 999.99 AS Price) AS Source
+ON Target.ProductID = Source.ProductID
+
+WHEN MATCHED THEN
+    UPDATE SET
+        Target.ProductName = Source.ProductName,
+        Target.Price = Source.Price
+
+WHEN NOT MATCHED THEN
+    INSERT (ProductID, ProductName, Price)
+    VALUES (Source.ProductID, Source.ProductName, Source.Price);
+
+-- Method 3: INSERT with WHERE NOT EXISTS (insert only if missing)
+INSERT INTO Products (ProductID, ProductName, Price)
+SELECT 123, 'Laptop', 999.99
+WHERE NOT EXISTS (
+    SELECT 1 FROM Products WHERE ProductID = 123
+);
+-- Inserts only if ProductID 123 doesn't exist
+
+-- Then update separately if needed
+UPDATE Products
+SET ProductName = 'Laptop', Price = 999.99
+WHERE ProductID = 123;
+
+-- Practical example: Update customer or create new
+DECLARE @Email NVARCHAR(100) = 'john@email.com';
+DECLARE @FirstName NVARCHAR(50) = 'John';
+DECLARE @LastName NVARCHAR(50) = 'Doe';
+DECLARE @Phone NVARCHAR(20) = '555-1234';
+
+MERGE INTO Customers AS Target
+USING (SELECT @Email AS Email) AS Source
+ON Target.Email = Source.Email
+
+WHEN MATCHED THEN
+    UPDATE SET
+        Target.FirstName = @FirstName,
+        Target.LastName = @LastName,
+        Target.Phone = @Phone,
+        Target.UpdatedDate = GETDATE()
+
+WHEN NOT MATCHED THEN
+    INSERT (Email, FirstName, LastName, Phone, CreatedDate)
+    VALUES (@Email, @FirstName, @LastName, @Phone, GETDATE());
+```
+
+---
+
+## Finding Duplicates
+
+**What it does**: Find records that appear more than once (like duplicate emails, names, etc).
+
+```sql
+-- Simple: Find duplicate emails
+SELECT Email, COUNT(*) AS DuplicateCount
+FROM Customers
+GROUP BY Email
+HAVING COUNT(*) > 1;
+-- Returns: Only emails that appear more than once
+
+-- Show all duplicate rows with details
+SELECT *
+FROM Customers
+WHERE Email IN (
+    SELECT Email
+    FROM Customers
+    GROUP BY Email
+    HAVING COUNT(*) > 1
+);
+-- Returns: All customer records with duplicate emails
+
+-- Find duplicates across multiple columns
+SELECT FirstName, LastName, COUNT(*) AS DuplicateCount
+FROM Customers
+GROUP BY FirstName, LastName
+HAVING COUNT(*) > 1;
+-- Returns: Duplicate first+last name combinations
+
+-- Find exact duplicate rows (all columns match)
+SELECT
+    FirstName,
+    LastName,
+    Email,
+    Phone,
+    COUNT(*) AS DuplicateCount
+FROM Customers
+GROUP BY FirstName, LastName, Email, Phone
+HAVING COUNT(*) > 1;
+
+-- Show which rows are duplicates with row numbers
+WITH DuplicateCTE AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY Email  -- Group by email
+            ORDER BY CustomerID -- Order within each group
+        ) AS RowNum
+    FROM Customers
+)
+SELECT * FROM DuplicateCTE
+WHERE RowNum > 1;
+-- Returns: All duplicate rows (keeping first occurrence)
+
+-- Find customers with same name but different email (possible duplicates)
+SELECT
+    c1.CustomerID AS ID1,
+    c2.CustomerID AS ID2,
+    c1.FirstName,
+    c1.LastName,
+    c1.Email AS Email1,
+    c2.Email AS Email2
+FROM Customers c1
+INNER JOIN Customers c2
+    ON c1.FirstName = c2.FirstName
+    AND c1.LastName = c2.LastName
+    AND c1.CustomerID < c2.CustomerID;  -- Avoid showing same pair twice
+-- Returns: Customers with same name but different IDs
+```
+
+---
+
+## Deleting Duplicates
+
+**What it does**: Remove duplicate records, keeping only one copy.
+
+```sql
+-- Safe method: Keep first, delete rest (using ROW_NUMBER)
+WITH DuplicateCTE AS (
+    SELECT
+        CustomerID,
+        Email,
+        ROW_NUMBER() OVER (
+            PARTITION BY Email      -- Group duplicates
+            ORDER BY CustomerID    -- Keep smallest ID
+        ) AS RowNum
+    FROM Customers
+)
+DELETE FROM DuplicateCTE
+WHERE RowNum > 1;
+-- Keeps: First customer with each email
+-- Deletes: All other duplicates
+
+-- Keep the newest record instead
+WITH DuplicateCTE AS (
+    SELECT
+        CustomerID,
+        Email,
+        ROW_NUMBER() OVER (
+            PARTITION BY Email
+            ORDER BY CreatedDate DESC  -- Keep newest
+        ) AS RowNum
+    FROM Customers
+)
+DELETE FROM DuplicateCTE
+WHERE RowNum > 1;
+-- Keeps: Most recent customer with each email
+
+-- Delete exact duplicates (all columns match)
+WITH DuplicateCTE AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY FirstName, LastName, Email, Phone
+            ORDER BY CustomerID
+        ) AS RowNum
+    FROM Customers
+)
+DELETE FROM DuplicateCTE
+WHERE RowNum > 1;
+
+-- ⚠️ Always test first! Use SELECT before DELETE
+WITH DuplicateCTE AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY Email
+            ORDER BY CustomerID
+        ) AS RowNum
+    FROM Customers
+)
+SELECT * FROM DuplicateCTE WHERE RowNum > 1;
+-- Check results, then change SELECT to DELETE
+
+-- Alternative: Keep record with most data
+WITH DuplicateCTE AS (
+    SELECT
+        CustomerID,
+        Email,
+        ROW_NUMBER() OVER (
+            PARTITION BY Email
+            ORDER BY
+                CASE WHEN Phone IS NULL THEN 1 ELSE 0 END,  -- Prefer records with phone
+                CASE WHEN Address IS NULL THEN 1 ELSE 0 END, -- Prefer records with address
+                CustomerID  -- Tie-breaker
+        ) AS RowNum
+    FROM Customers
+)
+DELETE FROM DuplicateCTE
+WHERE RowNum > 1;
+-- Keeps: Record with most complete data
+```
+
+---
+
+## Running Totals & Cumulative Sums
+
+**What it does**: Show cumulative total as you go through rows (like bank balance after each transaction).
+
+```sql
+-- Simple running total
+SELECT
+    OrderDate,
+    TotalAmount,
+    SUM(TotalAmount) OVER (ORDER BY OrderDate) AS RunningTotal
+FROM Orders
+ORDER BY OrderDate;
+-- Returns:
+-- 2024-01-01 | 100  | 100   (total so far)
+-- 2024-01-02 | 200  | 300   (100 + 200)
+-- 2024-01-03 | 150  | 450   (100 + 200 + 150)
+
+-- Running total by customer
+SELECT
+    CustomerID,
+    OrderDate,
+    TotalAmount,
+    SUM(TotalAmount) OVER (
+        PARTITION BY CustomerID  -- Separate total for each customer
+        ORDER BY OrderDate
+    ) AS CustomerRunningTotal
+FROM Orders
+ORDER BY CustomerID, OrderDate;
+-- Returns: Cumulative spending for each customer separately
+
+-- Running average
+SELECT
+    OrderDate,
+    TotalAmount,
+    AVG(TotalAmount) OVER (
+        ORDER BY OrderDate
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS RunningAverage
+FROM Orders
+ORDER BY OrderDate;
+-- Returns: Average of all orders up to this date
+
+-- Running count
+SELECT
+    OrderDate,
+    OrderID,
+    ROW_NUMBER() OVER (ORDER BY OrderDate) AS OrderNumber,
+    COUNT(*) OVER (ORDER BY OrderDate) AS TotalOrdersSoFar
+FROM Orders
+ORDER BY OrderDate;
+-- Returns: Each order with cumulative count
+
+-- Moving average (last 7 days)
+SELECT
+    OrderDate,
+    TotalAmount,
+    AVG(TotalAmount) OVER (
+        ORDER BY OrderDate
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW  -- Last 7 rows (6 + current)
+    ) AS MovingAverage7Days
+FROM Orders
+ORDER BY OrderDate;
+-- Returns: Average of current day plus previous 6 days
+
+-- Year-to-date total
+SELECT
+    OrderDate,
+    TotalAmount,
+    SUM(TotalAmount) OVER (
+        PARTITION BY YEAR(OrderDate)  -- Reset each year
+        ORDER BY OrderDate
+    ) AS YearToDateTotal
+FROM Orders
+ORDER BY OrderDate;
+-- Returns: Cumulative total that resets every January 1st
+
+-- Practical example: Bank account balance
+SELECT
+    TransactionDate,
+    TransactionType,
+    Amount,
+    SUM(CASE
+        WHEN TransactionType = 'Deposit' THEN Amount
+        WHEN TransactionType = 'Withdrawal' THEN -Amount
+    END) OVER (ORDER BY TransactionDate) AS Balance
+FROM Transactions
+ORDER BY TransactionDate;
+-- Returns: Running balance after each deposit/withdrawal
+```
+
+---
+
+## SQL Injection Prevention
+
+**What it does**: Protect your database from hackers who try to run malicious SQL through your application.
+
+```sql
+-- ⚠️ DANGEROUS! Never build SQL with user input directly
+DECLARE @UserInput NVARCHAR(100) = 'Smith';
+DECLARE @SQL NVARCHAR(MAX);
+SET @SQL = 'SELECT * FROM Customers WHERE LastName = ''' + @UserInput + '''';
+EXEC(@SQL);
+-- If user enters: Smith' OR '1'='1
+-- Query becomes: SELECT * FROM Customers WHERE LastName = 'Smith' OR '1'='1'
+-- Returns ALL customers! (security breach)
+
+-- ✅ SAFE: Use parameterized queries
+DECLARE @LastName NVARCHAR(100) = @UserInput;
+SELECT * FROM Customers WHERE LastName = @LastName;
+-- Safe! @LastName is treated as data, not SQL code
+
+-- ✅ SAFE: In stored procedures, use parameters
+CREATE PROCEDURE GetCustomerByName
+    @LastName NVARCHAR(100)  -- Parameter, not concatenated string
+AS
+BEGIN
+    SELECT * FROM Customers WHERE LastName = @LastName;
+END;
+-- Always safe because @LastName can't contain SQL commands
+
+EXEC GetCustomerByName @LastName = 'Smith';
+
+-- ✅ SAFE: With dynamic SQL, use sp_executesql
+DECLARE @SQL NVARCHAR(MAX);
+DECLARE @LastName NVARCHAR(100) = @UserInput;
+
+SET @SQL = 'SELECT * FROM Customers WHERE LastName = @LastName';
+EXEC sp_executesql @SQL, N'@LastName NVARCHAR(100)', @LastName;
+-- Safe! @LastName parameter is properly escaped
+
+-- ✅ SAFE: Validate user input first
+DECLARE @UserInput NVARCHAR(100) = 'Smith';
+
+-- Check for dangerous characters
+IF @UserInput LIKE '%[;''"--]%'
+BEGIN
+    RAISERROR('Invalid input detected', 16, 1);
+    RETURN;
+END
+
+SELECT * FROM Customers WHERE LastName = @UserInput;
+
+-- ✅ SAFE: Whitelist allowed values
+DECLARE @SortColumn NVARCHAR(50) = @UserInput;
+
+-- Only allow specific column names
+IF @SortColumn NOT IN ('FirstName', 'LastName', 'Email', 'CreatedDate')
+BEGIN
+    SET @SortColumn = 'CustomerID';  -- Default safe value
+END
+
+DECLARE @SQL NVARCHAR(MAX);
+SET @SQL = 'SELECT * FROM Customers ORDER BY ' + @SortColumn;
+EXEC(@SQL);
+-- Safe because we validated @SortColumn
+
+-- ❌ Common vulnerable patterns:
+-- Login check (NEVER do this!)
+DECLARE @Username NVARCHAR(100) = @UserInput;
+DECLARE @Password NVARCHAR(100) = @PasswordInput;
+SET @SQL = 'SELECT * FROM Users WHERE Username = ''' + @Username + ''' AND Password = ''' + @Password + '''';
+-- If user enters: admin' --
+-- Query becomes: SELECT * FROM Users WHERE Username = 'admin' --' AND Password = '...'
+-- Logs in as admin without password!
+
+-- ✅ CORRECT login check:
+SELECT * FROM Users
+WHERE Username = @Username AND PasswordHash = HASHBYTES('SHA2_256', @Password);
+-- Parameters are safe, and passwords are hashed
+
+-- Summary of protection methods:
+-- 1. Use parameters (not string concatenation)
+-- 2. Use stored procedures with parameters
+-- 3. Validate/sanitize all user input
+-- 4. Use whitelists for dynamic values (columns, tables)
+-- 5. Never trust user input
+-- 6. Use sp_executesql for dynamic SQL
+```
+
+---
+
+## Performance Best Practices
+
+**What it does**: Make your queries run faster and use less server resources.
+
+```sql
+-- 1. Use indexes on WHERE and JOIN columns
+CREATE INDEX IX_Customers_Email ON Customers(Email);
+-- Makes: WHERE Email = 'x' and JOIN ON Email much faster
+
+-- 2. Avoid SELECT *, specify columns
+-- ❌ Slow:
+SELECT * FROM Customers;
+
+-- ✅ Fast:
+SELECT CustomerID, FirstName, Email FROM Customers;
+-- Only gets what you need, less data transfer
+
+-- 3. Use EXISTS instead of IN for subqueries
+-- ❌ Slower:
+SELECT * FROM Customers
+WHERE CustomerID IN (SELECT CustomerID FROM Orders);
+
+-- ✅ Faster:
+SELECT * FROM Customers c
+WHERE EXISTS (SELECT 1 FROM Orders o WHERE o.CustomerID = c.CustomerID);
+-- Stops searching once found
+
+-- 4. Use NOCOUNT in procedures (reduces network traffic)
+CREATE PROCEDURE GetCustomers
+AS
+BEGIN
+    SET NOCOUNT ON;  -- Don't send "X rows affected" message
+    SELECT * FROM Customers;
+END;
+
+-- 5. Avoid functions on columns in WHERE (prevents index use)
+-- ❌ Slow (can't use index):
+SELECT * FROM Orders WHERE YEAR(OrderDate) = 2024;
+
+-- ✅ Fast (can use index):
+SELECT * FROM Orders
+WHERE OrderDate >= '2024-01-01' AND OrderDate < '2025-01-01';
+
+-- 6. Use UNION ALL instead of UNION (when duplicates ok)
+-- ❌ Slower:
+SELECT City FROM Customers
+UNION  -- Removes duplicates (extra work)
+SELECT City FROM Suppliers;
+
+-- ✅ Faster:
+SELECT City FROM Customers
+UNION ALL  -- Keeps duplicates (no extra work)
+SELECT City FROM Suppliers;
+
+-- 7. Limit JOIN results early with WHERE
+-- ❌ Slow:
+SELECT * FROM Orders o
+INNER JOIN Customers c ON o.CustomerID = c.CustomerID
+WHERE o.OrderDate >= '2024-01-01';
+
+-- ✅ Better (filter before joining if possible):
+SELECT * FROM
+(SELECT * FROM Orders WHERE OrderDate >= '2024-01-01') o
+INNER JOIN Customers c ON o.CustomerID = c.CustomerID;
+
+-- 8. Use covering indexes for frequently run queries
+CREATE INDEX IX_Orders_CustomerDate
+ON Orders(CustomerID, OrderDate)
+INCLUDE (TotalAmount);  -- Include columns you SELECT
+-- Query can get all data from index without accessing table
+
+-- 9. Update statistics for accurate query plans
+UPDATE STATISTICS Customers;
+-- Helps SQL Server choose best query execution plan
+
+-- 10. Avoid cursors, use set-based operations
+-- ❌ Very slow (processes row by row):
+DECLARE @CustomerID INT;
+DECLARE customer_cursor CURSOR FOR SELECT CustomerID FROM Customers;
+OPEN customer_cursor;
+FETCH NEXT FROM customer_cursor INTO @CustomerID;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    UPDATE Orders SET Status = 'Processed' WHERE CustomerID = @CustomerID;
+    FETCH NEXT FROM customer_cursor INTO @CustomerID;
+END;
+CLOSE customer_cursor;
+DEALLOCATE customer_cursor;
+
+-- ✅ Fast (processes all at once):
+UPDATE Orders SET Status = 'Processed'
+WHERE CustomerID IN (SELECT CustomerID FROM Customers);
+
+-- 11. Use temp tables for complex queries
+-- ❌ Slow (subquery runs multiple times):
+SELECT * FROM (complex subquery) WHERE ...
+INNER JOIN (same complex subquery) ON ...
+
+-- ✅ Fast (runs once, stores result):
+SELECT * INTO #TempResults FROM (complex subquery);
+CREATE INDEX IX_Temp ON #TempResults(ID);
+SELECT * FROM #TempResults WHERE ...
+
+-- 12. Batch large operations
+-- ❌ Slow (locks table for long time):
+DELETE FROM Orders WHERE OrderDate < '2020-01-01';  -- 1 million rows
+
+-- ✅ Better (delete in chunks):
+WHILE 1=1
+BEGIN
+    DELETE TOP (1000) FROM Orders WHERE OrderDate < '2020-01-01';
+    IF @@ROWCOUNT < 1000 BREAK;
+    WAITFOR DELAY '00:00:01';  -- Give other queries a chance
+END;
+```
+
+---
+
+## Troubleshooting Slow Queries
+
+**What it does**: Find and fix queries that run slowly.
+
+```sql
+-- 1. Find currently running queries
+SELECT
+    session_id,
+    status,
+    command,
+    cpu_time,
+    total_elapsed_time / 1000 AS elapsed_seconds,
+    wait_type,
+    blocking_session_id,
+    text
+FROM sys.dm_exec_requests
+CROSS APPLY sys.dm_exec_sql_text(sql_handle)
+WHERE session_id > 50  -- Exclude system processes
+ORDER BY cpu_time DESC;
+-- Shows: What's running right now, how long, what's waiting
+
+-- 2. Find slow queries from cache
+SELECT TOP 20
+    total_elapsed_time / execution_count / 1000000 AS avg_seconds,
+    execution_count,
+    total_worker_time / 1000000 AS total_cpu_seconds,
+    SUBSTRING(text, (statement_start_offset/2)+1,
+        ((CASE statement_end_offset
+            WHEN -1 THEN DATALENGTH(text)
+            ELSE statement_end_offset
+        END - statement_start_offset)/2) + 1) AS query_text
+FROM sys.dm_exec_query_stats
+CROSS APPLY sys.dm_exec_sql_text(sql_handle)
+ORDER BY avg_seconds DESC;
+-- Shows: Slowest queries on average
+
+-- 3. See execution plan (shows how SQL Server runs your query)
+SET SHOWPLAN_TEXT ON;
+GO
+SELECT * FROM Orders o
+INNER JOIN Customers c ON o.CustomerID = c.CustomerID
+WHERE o.OrderDate >= '2024-01-01';
+GO
+SET SHOWPLAN_TEXT OFF;
+-- Shows: Steps SQL Server takes (scans, seeks, joins)
+
+-- 4. Check for missing indexes
+SELECT
+    user_seeks * avg_total_user_cost * (avg_user_impact * 0.01) AS improvement_measure,
+    'CREATE INDEX IX_' + object_name(object_id) + '_' +
+        CAST(migs.index_group_handle AS VARCHAR) +
+        ' ON ' + mid.statement + ' (' + ISNULL(mid.equality_columns, '') +
+        CASE WHEN mid.inequality_columns IS NOT NULL
+            THEN CASE WHEN mid.equality_columns IS NOT NULL THEN ',' ELSE '' END +
+                mid.inequality_columns ELSE '' END + ')' +
+        CASE WHEN mid.included_columns IS NOT NULL
+            THEN ' INCLUDE (' + mid.included_columns + ')' ELSE '' END AS create_index_statement
+FROM sys.dm_db_missing_index_groups mig
+INNER JOIN sys.dm_db_missing_index_group_stats migs ON mig.index_group_handle = migs.group_handle
+INNER JOIN sys.dm_db_missing_index_details mid ON mig.index_handle = mid.index_handle
+ORDER BY improvement_measure DESC;
+-- Shows: Indexes that would help performance
+
+-- 5. Find blocking queries
+SELECT
+    blocking.session_id AS blocking_session,
+    blocked.session_id AS blocked_session,
+    blocking_text.text AS blocking_query,
+    blocked_text.text AS blocked_query,
+    blocked.wait_type,
+    blocked.wait_time / 1000 AS wait_seconds
+FROM sys.dm_exec_requests blocked
+INNER JOIN sys.dm_exec_requests blocking ON blocked.blocking_session_id = blocking.session_id
+CROSS APPLY sys.dm_exec_sql_text(blocking.sql_handle) blocking_text
+CROSS APPLY sys.dm_exec_sql_text(blocked.sql_handle) blocked_text;
+-- Shows: Which query is blocking which
+
+-- 6. Kill a stuck query (use carefully!)
+-- First find the session_id from query above
+KILL 53;  -- Replace 53 with actual session_id
+-- Terminates the query
+
+-- 7. Check table statistics (outdated stats = slow queries)
+EXEC sp_helpstats 'Customers';
+-- Shows: When stats were last updated
+
+UPDATE STATISTICS Customers;  -- Update if old
+
+-- 8. Find unused indexes (waste space and slow down INSERT/UPDATE)
+SELECT
+    OBJECT_NAME(i.object_id) AS table_name,
+    i.name AS index_name,
+    user_seeks,
+    user_scans,
+    user_lookups,
+    user_updates
+FROM sys.dm_db_index_usage_stats s
+RIGHT JOIN sys.indexes i ON s.object_id = i.object_id AND s.index_id = i.index_id
+WHERE OBJECTPROPERTY(i.object_id, 'IsUserTable') = 1
+  AND s.database_id = DB_ID()
+  AND user_seeks = 0
+  AND user_scans = 0
+  AND user_lookups = 0
+ORDER BY user_updates DESC;
+-- Shows: Indexes never used for reads (consider dropping)
+
+-- 9. Simple query optimization tips:
+-- ❌ Problem: Table scan (reads entire table)
+SELECT * FROM Customers WHERE Email = 'john@email.com';
+
+-- ✅ Solution: Add index
+CREATE INDEX IX_Customers_Email ON Customers(Email);
+
+-- ❌ Problem: Function on column prevents index use
+SELECT * FROM Orders WHERE YEAR(OrderDate) = 2024;
+
+-- ✅ Solution: Avoid function on column
+SELECT * FROM Orders WHERE OrderDate >= '2024-01-01' AND OrderDate < '2025-01-01';
+```
+
+---
+
+## Inventory Management
+
+**What it does**: Common queries for tracking products, stock levels, and inventory changes.
+
+```sql
+-- Current stock levels (simple)
+SELECT
+    ProductID,
+    ProductName,
+    StockQuantity,
+    CASE
+        WHEN StockQuantity = 0 THEN 'Out of Stock'
+        WHEN StockQuantity < 10 THEN 'Low Stock'
+        ELSE 'In Stock'
+    END AS StockStatus
+FROM Products
+ORDER BY StockQuantity ASC;
+
+-- Products that need reordering
+SELECT
+    ProductID,
+    ProductName,
+    StockQuantity,
+    ReorderLevel,
+    ReorderLevel - StockQuantity AS QuantityToOrder
+FROM Products
+WHERE StockQuantity < ReorderLevel
+ORDER BY StockQuantity ASC;
+-- Shows: Products below reorder point and how many to order
+
+-- Inventory value (total worth of stock)
+SELECT
+    Category,
+    SUM(StockQuantity * UnitCost) AS InventoryValue,
+    SUM(StockQuantity) AS TotalUnits
+FROM Products
+GROUP BY Category
+ORDER BY InventoryValue DESC;
+-- Shows: Total value of inventory by category
+
+-- Product movement (track stock changes)
+SELECT
+    p.ProductName,
+    im.MovementDate,
+    im.MovementType,  -- 'Purchase', 'Sale', 'Return', 'Adjustment'
+    im.Quantity,
+    im.QuantityBefore,
+    im.QuantityAfter
+FROM InventoryMovements im
+INNER JOIN Products p ON im.ProductID = p.ProductID
+WHERE im.ProductID = 123
+ORDER BY im.MovementDate DESC;
+-- Shows: Complete history of stock changes for a product
+
+-- Fast-moving vs slow-moving products
+SELECT
+    p.ProductID,
+    p.ProductName,
+    COUNT(od.OrderID) AS TimesSold,
+    SUM(od.Quantity) AS TotalQuantitySold,
+    CASE
+        WHEN COUNT(od.OrderID) > 50 THEN 'Fast-moving'
+        WHEN COUNT(od.OrderID) > 10 THEN 'Medium'
+        ELSE 'Slow-moving'
+    END AS MovementCategory
+FROM Products p
+LEFT JOIN OrderDetails od ON p.ProductID = od.ProductID
+WHERE od.OrderDate >= DATEADD(MONTH, -3, GETDATE())  -- Last 3 months
+GROUP BY p.ProductID, p.ProductName
+ORDER BY TotalQuantitySold DESC;
+
+-- Stock turnover rate (how fast inventory sells)
+SELECT
+    ProductID,
+    ProductName,
+    (TotalSold * 1.0 / NULLIF(AverageStock, 0)) AS TurnoverRate
+FROM (
+    SELECT
+        p.ProductID,
+        p.ProductName,
+        SUM(od.Quantity) AS TotalSold,
+        AVG(p.StockQuantity) AS AverageStock
+    FROM Products p
+    LEFT JOIN OrderDetails od ON p.ProductID = od.ProductID
+    WHERE od.OrderDate >= DATEADD(YEAR, -1, GETDATE())
+    GROUP BY p.ProductID, p.ProductName
+) AS StockData
+ORDER BY TurnoverRate DESC;
+-- Higher = sells faster
+```
+
+---
+
+## Sales Reports
+
+**What it does**: Common sales analysis queries for business reporting.
+
+```sql
+-- Daily sales summary
+SELECT
+    CAST(OrderDate AS DATE) AS SaleDate,
+    COUNT(OrderID) AS NumberOfOrders,
+    SUM(TotalAmount) AS TotalSales,
+    AVG(TotalAmount) AS AverageOrderValue,
+    MIN(TotalAmount) AS SmallestOrder,
+    MAX(TotalAmount) AS LargestOrder
+FROM Orders
+WHERE OrderDate >= DATEADD(MONTH, -1, GETDATE())  -- Last month
+GROUP BY CAST(OrderDate AS DATE)
+ORDER BY SaleDate DESC;
+
+-- Monthly sales comparison (this year vs last year)
+SELECT
+    MONTH(OrderDate) AS Month,
+    SUM(CASE WHEN YEAR(OrderDate) = 2024 THEN TotalAmount ELSE 0 END) AS Sales2024,
+    SUM(CASE WHEN YEAR(OrderDate) = 2023 THEN TotalAmount ELSE 0 END) AS Sales2023,
+    SUM(CASE WHEN YEAR(OrderDate) = 2024 THEN TotalAmount ELSE 0 END) -
+    SUM(CASE WHEN YEAR(OrderDate) = 2023 THEN TotalAmount ELSE 0 END) AS Difference
+FROM Orders
+WHERE YEAR(OrderDate) IN (2023, 2024)
+GROUP BY MONTH(OrderDate)
+ORDER BY Month;
+
+-- Top 10 customers by revenue
+SELECT TOP 10
+    c.CustomerID,
+    c.FirstName + ' ' + c.LastName AS CustomerName,
+    COUNT(o.OrderID) AS TotalOrders,
+    SUM(o.TotalAmount) AS TotalSpent,
+    AVG(o.TotalAmount) AS AverageOrderValue,
+    MAX(o.OrderDate) AS LastOrderDate
+FROM Customers c
+INNER JOIN Orders o ON c.CustomerID = o.CustomerID
+GROUP BY c.CustomerID, c.FirstName, c.LastName
+ORDER BY TotalSpent DESC;
+
+-- Sales by product category
+SELECT
+    p.Category,
+    COUNT(DISTINCT o.OrderID) AS NumberOfOrders,
+    SUM(od.Quantity) AS UnitsSold,
+    SUM(od.Quantity * od.UnitPrice) AS TotalRevenue,
+    AVG(od.UnitPrice) AS AveragePrice
+FROM Products p
+INNER JOIN OrderDetails od ON p.ProductID = od.ProductID
+INNER JOIN Orders o ON od.OrderID = o.OrderID
+WHERE o.OrderDate >= '2024-01-01'
+GROUP BY p.Category
+ORDER BY TotalRevenue DESC;
+
+-- Sales trend (running total by month)
+SELECT
+    YEAR(OrderDate) AS Year,
+    MONTH(OrderDate) AS Month,
+    SUM(TotalAmount) AS MonthlySales,
+    SUM(SUM(TotalAmount)) OVER (
+        PARTITION BY YEAR(OrderDate)
+        ORDER BY MONTH(OrderDate)
+    ) AS YearToDateSales
+FROM Orders
+GROUP BY YEAR(OrderDate), MONTH(OrderDate)
+ORDER BY Year, Month;
+
+-- Customer retention (repeat customers)
+SELECT
+    YEAR(o.OrderDate) AS Year,
+    COUNT(DISTINCT o.CustomerID) AS TotalCustomers,
+    COUNT(DISTINCT CASE WHEN o2.OrderID IS NOT NULL THEN o.CustomerID END) AS ReturnedCustomers,
+    CAST(COUNT(DISTINCT CASE WHEN o2.OrderID IS NOT NULL THEN o.CustomerID END) * 100.0 /
+        COUNT(DISTINCT o.CustomerID) AS DECIMAL(5,2)) AS RetentionRate
+FROM Orders o
+LEFT JOIN Orders o2
+    ON o.CustomerID = o2.CustomerID
+    AND o2.OrderDate > o.OrderDate
+    AND DATEDIFF(DAY, o.OrderDate, o2.OrderDate) <= 90  -- Returned within 90 days
+GROUP BY YEAR(o.OrderDate)
+ORDER BY Year;
+
+-- Best selling products
+SELECT TOP 20
+    p.ProductID,
+    p.ProductName,
+    p.Category,
+    SUM(od.Quantity) AS TotalSold,
+    SUM(od.Quantity * od.UnitPrice) AS Revenue,
+    COUNT(DISTINCT od.OrderID) AS NumberOfOrders
+FROM Products p
+INNER JOIN OrderDetails od ON p.ProductID = od.ProductID
+INNER JOIN Orders o ON od.OrderID = o.OrderID
+WHERE o.OrderDate >= DATEADD(MONTH, -3, GETDATE())  -- Last 3 months
+GROUP BY p.ProductID, p.ProductName, p.Category
+ORDER BY TotalSold DESC;
+```
+
+---
+
+## User Activity Tracking
+
+**What it does**: Track what users do in your application (logins, actions, page views).
+
+```sql
+-- Create activity log table
+CREATE TABLE UserActivityLog (
+    LogID INT IDENTITY(1,1) PRIMARY KEY,
+    UserID INT NOT NULL,
+    ActivityType NVARCHAR(50) NOT NULL,  -- 'Login', 'PageView', 'Purchase', etc.
+    ActivityDetails NVARCHAR(MAX),
+    IPAddress NVARCHAR(50),
+    ActivityDate DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+
+-- Log a user action
+INSERT INTO UserActivityLog (UserID, ActivityType, ActivityDetails, IPAddress)
+VALUES (123, 'Login', 'Successful login', '192.168.1.1');
+
+-- Daily active users
+SELECT
+    CAST(ActivityDate AS DATE) AS Date,
+    COUNT(DISTINCT UserID) AS ActiveUsers
+FROM UserActivityLog
+WHERE ActivityDate >= DATEADD(DAY, -30, GETDATE())
+GROUP BY CAST(ActivityDate AS DATE)
+ORDER BY Date;
+
+-- User session duration
+SELECT
+    UserID,
+    MIN(ActivityDate) AS SessionStart,
+    MAX(ActivityDate) AS SessionEnd,
+    DATEDIFF(MINUTE, MIN(ActivityDate), MAX(ActivityDate)) AS SessionMinutes
+FROM UserActivityLog
+WHERE CAST(ActivityDate AS DATE) = '2024-11-18'
+GROUP BY UserID, CAST(ActivityDate AS DATE)
+ORDER BY SessionMinutes DESC;
+
+-- Most viewed pages
+SELECT
+    ActivityDetails AS PageURL,
+    COUNT(*) AS ViewCount,
+    COUNT(DISTINCT UserID) AS UniqueUsers
+FROM UserActivityLog
+WHERE ActivityType = 'PageView'
+  AND ActivityDate >= DATEADD(DAY, -7, GETDATE())
+GROUP BY ActivityDetails
+ORDER BY ViewCount DESC;
+
+-- User retention by cohort (users who signed up same month)
+SELECT
+    FORMAT(u.SignupDate, 'yyyy-MM') AS SignupMonth,
+    COUNT(DISTINCT u.UserID) AS NewUsers,
+    COUNT(DISTINCT CASE WHEN a.ActivityDate >= DATEADD(MONTH, 1, u.SignupDate) THEN a.UserID END) AS ActiveMonth1,
+    COUNT(DISTINCT CASE WHEN a.ActivityDate >= DATEADD(MONTH, 2, u.SignupDate) THEN a.UserID END) AS ActiveMonth2,
+    COUNT(DISTINCT CASE WHEN a.ActivityDate >= DATEADD(MONTH, 3, u.SignupDate) THEN a.UserID END) AS ActiveMonth3
+FROM Users u
+LEFT JOIN UserActivityLog a ON u.UserID = a.UserID
+GROUP BY FORMAT(u.SignupDate, 'yyyy-MM')
+ORDER BY SignupMonth;
+
+-- Find inactive users (haven't logged in for 30 days)
+SELECT
+    u.UserID,
+    u.Username,
+    u.Email,
+    MAX(a.ActivityDate) AS LastActivity,
+    DATEDIFF(DAY, MAX(a.ActivityDate), GETDATE()) AS DaysSinceActive
+FROM Users u
+LEFT JOIN UserActivityLog a ON u.UserID = a.UserID
+GROUP BY u.UserID, u.Username, u.Email
+HAVING MAX(a.ActivityDate) < DATEADD(DAY, -30, GETDATE())
+    OR MAX(a.ActivityDate) IS NULL
+ORDER BY DaysSinceActive DESC;
+
+-- User engagement score
+SELECT
+    UserID,
+    COUNT(*) AS TotalActions,
+    COUNT(DISTINCT CAST(ActivityDate AS DATE)) AS ActiveDays,
+    COUNT(DISTINCT ActivityType) AS DifferentActions,
+    -- Simple engagement score
+    (COUNT(*) * 0.5) +  -- 0.5 points per action
+    (COUNT(DISTINCT CAST(ActivityDate AS DATE)) * 2) +  -- 2 points per active day
+    (COUNT(DISTINCT ActivityType) * 5) AS EngagementScore  -- 5 points per action type
+FROM UserActivityLog
+WHERE ActivityDate >= DATEADD(DAY, -30, GETDATE())
+GROUP BY UserID
+ORDER BY EngagementScore DESC;
+```
+
+---
+
+## Type Conversion & Casting
+
+**What it does**: Change data from one type to another (text to number, date to text, etc).
+
+```sql
+-- CAST - convert between types
+SELECT CAST('123' AS INT) AS NumberFromText;          -- '123' → 123
+SELECT CAST(123 AS NVARCHAR(10)) AS TextFromNumber;   -- 123 → '123'
+SELECT CAST('2024-11-18' AS DATE) AS DateFromText;    -- '2024-11-18' → 2024-11-18
+SELECT CAST(123.456 AS INT) AS RoundDown;             -- 123.456 → 123 (truncates)
+
+-- CONVERT - same as CAST but with format options
+SELECT CONVERT(INT, '123') AS NumberFromText;
+SELECT CONVERT(NVARCHAR(10), GETDATE(), 101) AS USDate;  -- 11/18/2024
+SELECT CONVERT(NVARCHAR(10), GETDATE(), 103) AS UKDate;  -- 18/11/2024
+
+-- TRY_CAST and TRY_CONVERT (safe versions - return NULL if fails)
+SELECT TRY_CAST('abc' AS INT) AS Result;              -- Returns NULL (not an error)
+SELECT CAST('abc' AS INT) AS Result;                  -- ERROR!
+
+SELECT TRY_CONVERT(INT, 'not a number') AS SafeConvert;  -- Returns NULL
+
+-- String to number
+SELECT CAST('123' AS INT) AS IntValue;
+SELECT CAST('123.45' AS DECIMAL(10,2)) AS DecimalValue;
+SELECT CAST('123.45' AS FLOAT) AS FloatValue;
+
+-- Number to string
+SELECT CAST(123 AS NVARCHAR(10)) AS TextValue;
+SELECT STR(123.456, 10, 2) AS FormattedText;  -- '    123.46' (10 chars, 2 decimals)
+
+-- String to date
+SELECT CAST('2024-11-18' AS DATE) AS DateValue;
+SELECT CAST('2024-11-18 14:30:00' AS DATETIME) AS DateTimeValue;
+SELECT CONVERT(DATE, '11/18/2024', 101) AS USFormat;  -- MM/DD/YYYY
+SELECT CONVERT(DATE, '18/11/2024', 103) AS UKFormat;  -- DD/MM/YYYY
+
+-- Date to string
+SELECT CAST(GETDATE() AS NVARCHAR(20)) AS DefaultFormat;
+SELECT CONVERT(NVARCHAR(10), GETDATE(), 101) AS USDate;     -- MM/DD/YYYY
+SELECT CONVERT(NVARCHAR(10), GETDATE(), 103) AS UKDate;     -- DD/MM/YYYY
+SELECT CONVERT(NVARCHAR(20), GETDATE(), 120) AS ISOFormat;  -- YYYY-MM-DD HH:MM:SS
+SELECT FORMAT(GETDATE(), 'yyyy-MM-dd') AS CustomFormat;     -- 2024-11-18
+
+-- Implicit conversion (automatic, but can be slow)
+SELECT * FROM Products WHERE ProductID = '123';  -- '123' auto-converts to 123
+-- Better: Use correct type
+SELECT * FROM Products WHERE ProductID = 123;
+
+-- Common conversions cheat sheet:
+/*
+Text to Number:
+  CAST('123' AS INT)
+  CAST('123.45' AS DECIMAL(10,2))
+  TRY_CAST('abc' AS INT)  -- Safe version
+
+Number to Text:
+  CAST(123 AS VARCHAR(10))
+  STR(123.456, 10, 2)
+
+Text to Date:
+  CAST('2024-11-18' AS DATE)
+  CONVERT(DATE, '11/18/2024', 101)
+
+Date to Text:
+  CONVERT(VARCHAR(10), GETDATE(), 101)  -- MM/DD/YYYY
+  FORMAT(GETDATE(), 'yyyy-MM-dd')       -- Custom format
+
+NULL handling:
+  ISNULL(Phone, 'N/A')
+  COALESCE(Phone, Mobile, 'N/A')
+*/
 ```
 
 ---
