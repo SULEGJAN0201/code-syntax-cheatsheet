@@ -1,6 +1,7 @@
-# Complete Syntax Cheat Sheet - JavaScript, TypeScript & C#
+# Beginner-Friendly Syntax Cheat Sheet
+## JavaScript, TypeScript & C# - Side by Side
 
-A quick reference guide for Angular/React/.NET developers who need to switch between languages.
+> **Quick Guide**: This cheat sheet helps you quickly remember syntax when switching between JavaScript, TypeScript, and C#. Each example includes comments showing the output!
 
 ---
 
@@ -11,12 +12,12 @@ A quick reference guide for Angular/React/.NET developers who need to switch bet
 4. [Loops & Iteration](#loops--iteration)
 5. [Functions & Methods](#functions--methods)
 6. [Classes & Objects](#classes--objects)
-7. [Conditionals](#conditionals)
+7. [Conditionals (If/Else/Switch)](#conditionals)
 8. [String Operations](#string-operations)
 9. [Null Handling](#null-handling)
 10. [Async/Await](#asyncawait)
 11. [Error Handling](#error-handling)
-12. [LINQ vs Array Methods](#linq-vs-array-methods)
+12. [Array Methods & LINQ](#array-methods--linq)
 13. [Interfaces & Types](#interfaces--types)
 14. [Generics](#generics)
 15. [Destructuring](#destructuring)
@@ -25,556 +26,705 @@ A quick reference guide for Angular/React/.NET developers who need to switch bet
 18. [Date & Time](#date--time)
 19. [JSON Operations](#json-operations)
 20. [File Operations](#file-operations)
+21. [Common Data Structures](#common-data-structures)
 
 ---
 
 ## Variables & Types
 
-### Variable Declaration
+**What it does**: Variables store data. Types define what kind of data (text, numbers, true/false, etc.)
 
-| JavaScript | TypeScript | C# |
-|------------|------------|-----|
-| `let name = "John";` | `let name: string = "John";` | `var name = "John";` |
-| `const age = 30;` | `const age: number = 30;` | `const int age = 30;` |
-| `var old = true;` *(avoid)* | `var old: boolean = true;` | `string name = "John";` |
-
-### Type Annotations
-
-| JavaScript | TypeScript | C# |
-|------------|------------|-----|
-| *No types* | `let count: number;` | `int count;` |
-| *Duck typing* | `let name: string;` | `string name;` |
-| - | `let isActive: boolean;` | `bool isActive;` |
-| - | `let data: any;` | `object data;` or `dynamic data;` |
-| - | `let items: string[];` | `string[] items;` |
-| - | `let tuple: [string, number];` | `Tuple<string, int> tuple;` |
-
-### Type Inference
+### Basic Variable Declaration
 
 ```javascript
-// JavaScript
-let name = "John";  // inferred as string
+// JavaScript - use let for variables that can change, const for constants
+let name = "John";           // Can be changed later
+const age = 30;              // Cannot be changed
+var old = true;              // Old way - avoid using var
+
+console.log(name);           // Output: John
+console.log(age);            // Output: 30
 ```
 
 ```typescript
-// TypeScript
-let name = "John";  // inferred as string
-let age = 30;       // inferred as number
+// TypeScript - same as JavaScript but you can specify types
+let name: string = "John";   // This is text (string)
+const age: number = 30;      // This is a number
+let isActive: boolean = true; // This is true/false
+
+console.log(name);           // Output: John
+console.log(age);            // Output: 30
 ```
 
 ```csharp
-// C#
-var name = "John";  // inferred as string
-var age = 30;       // inferred as int
+// C# - you must specify types (or use 'var' to let C# figure it out)
+string name = "John";        // This is text (string)
+int age = 30;                // This is a whole number (integer)
+bool isActive = true;        // This is true/false (boolean)
+const int maxUsers = 100;    // Constant value
+
+// Using 'var' - C# figures out the type automatically
+var name2 = "John";          // C# knows this is a string
+var age2 = 30;               // C# knows this is an int
+
+Console.WriteLine(name);     // Output: John
+Console.WriteLine(age);      // Output: 30
 ```
+
+### Common Types Comparison
+
+| Type | JavaScript | TypeScript | C# | Example |
+|------|------------|------------|-----|---------|
+| Text | `let name = "John"` | `let name: string = "John"` | `string name = "John"` | "Hello", "ABC" |
+| Number | `let age = 30` | `let age: number = 30` | `int age = 30` | 25, 100, -5 |
+| Decimal | `let price = 9.99` | `let price: number = 9.99` | `double price = 9.99` | 3.14, 0.5 |
+| True/False | `let active = true` | `let active: boolean = true` | `bool active = true` | true, false |
+| Any type | `let data = anything` | `let data: any = anything` | `object data = anything` | Mixed types |
 
 ---
 
 ## Console Output / Printing
 
-### Basic Printing
+**What it does**: Shows text/data in the console (for debugging or displaying information)
 
-| JavaScript | TypeScript | C# |
-|------------|------------|-----|
-| `console.log("Hello");` | `console.log("Hello");` | `Console.WriteLine("Hello");` |
-| `console.log(name);` | `console.log(name);` | `Console.WriteLine(name);` |
-| `console.error("Error");` | `console.error("Error");` | `Console.Error.WriteLine("Error");` |
-| `console.warn("Warning");` | `console.warn("Warning");` | `Debug.WriteLine("Warning");` |
-
-### String Interpolation
+### Simple Printing
 
 ```javascript
-// JavaScript
+// JavaScript - console.log() prints to the console
+console.log("Hello World");           // Output: Hello World
+console.log(42);                      // Output: 42
+console.log(true);                    // Output: true
+
+// Printing multiple values
+console.log("Age:", 30);              // Output: Age: 30
+console.log("Name:", "John", "Age:", 30); // Output: Name: John Age: 30
+```
+
+```typescript
+// TypeScript - exactly the same as JavaScript
+console.log("Hello World");           // Output: Hello World
+console.log("Age:", 30);              // Output: Age: 30
+```
+
+```csharp
+// C# - Console.WriteLine() prints to the console
+Console.WriteLine("Hello World");     // Output: Hello World
+Console.WriteLine(42);                // Output: 42
+Console.WriteLine(true);              // Output: True
+
+// Printing multiple values
+Console.WriteLine("Age: " + 30);      // Output: Age: 30
+Console.WriteLine("Name: John, Age: 30"); // Output: Name: John, Age: 30
+```
+
+### String Interpolation (Inserting Variables into Text)
+
+**What it does**: Easily mix variables with text
+
+```javascript
+// JavaScript - use backticks ` and ${variable}
 const name = "John";
 const age = 30;
-console.log(`Name: ${name}, Age: ${age}`);
-console.log("Name: " + name + ", Age: " + age);
+
+console.log(`My name is ${name}`);                    // Output: My name is John
+console.log(`${name} is ${age} years old`);          // Output: John is 30 years old
+console.log(`Next year I'll be ${age + 1}`);         // Output: Next year I'll be 31
+
+// Old way (still works but harder to read)
+console.log("My name is " + name);                    // Output: My name is John
 ```
 
 ```typescript
-// TypeScript
+// TypeScript - same as JavaScript
 const name: string = "John";
 const age: number = 30;
-console.log(`Name: ${name}, Age: ${age}`);
+
+console.log(`My name is ${name}`);                    // Output: My name is John
+console.log(`${name} is ${age} years old`);          // Output: John is 30 years old
 ```
 
 ```csharp
-// C#
+// C# - use $ before the string and {variable}
 var name = "John";
 var age = 30;
-Console.WriteLine($"Name: {name}, Age: {age}");
-Console.WriteLine("Name: " + name + ", Age: " + age);
+
+Console.WriteLine($"My name is {name}");              // Output: My name is John
+Console.WriteLine($"{name} is {age} years old");      // Output: John is 30 years old
+Console.WriteLine($"Next year I'll be {age + 1}");    // Output: Next year I'll be 31
+
+// Old way (still works)
+Console.WriteLine("My name is " + name);              // Output: My name is John
 ```
 
-### Formatted Output
+### Formatting Numbers
+
+**What it does**: Display numbers with specific formats (like currency, decimals, etc.)
 
 ```javascript
 // JavaScript
-console.log("Total: $%.2f", 123.456);  // Limited support
-console.log(`Total: $${(123.456).toFixed(2)}`);
+const price = 123.456;
+console.log(price.toFixed(2));                        // Output: 123.46 (2 decimal places)
+console.log(`$${price.toFixed(2)}`);                  // Output: $123.46
 ```
 
 ```typescript
-// TypeScript
-console.log(`Total: $${(123.456).toFixed(2)}`);
+// TypeScript - same as JavaScript
+const price: number = 123.456;
+console.log(price.toFixed(2));                        // Output: 123.46
+console.log(`$${price.toFixed(2)}`);                  // Output: $123.46
 ```
 
 ```csharp
 // C#
-Console.WriteLine("Total: ${0:F2}", 123.456);
-Console.WriteLine($"Total: ${123.456:F2}");
+var price = 123.456;
+Console.WriteLine($"{price:F2}");                     // Output: 123.46 (2 decimal places)
+Console.WriteLine($"${price:F2}");                    // Output: $123.46
+Console.WriteLine($"{price:C}");                      // Output: $123.46 (currency format)
 ```
 
 ---
 
 ## Arrays & Collections
 
-### Array Declaration
+**What it does**: Arrays store multiple values in a single variable (like a list of items)
 
-| JavaScript | TypeScript | C# |
-|------------|------------|-----|
-| `const arr = [1, 2, 3];` | `const arr: number[] = [1, 2, 3];` | `int[] arr = {1, 2, 3};` |
-| `const arr = [];` | `const arr: string[] = [];` | `var arr = new int[] {1, 2, 3};` |
-| `const arr = new Array(5);` | `const arr: number[] = new Array(5);` | `var arr = new int[5];` |
-
-### Lists (Dynamic Arrays)
-
-| JavaScript | TypeScript | C# |
-|------------|------------|-----|
-| `const list = [];` | `const list: number[] = [];` | `var list = new List<int>();` |
-| `list.push(1);` | `list.push(1);` | `list.Add(1);` |
-| `list.pop();` | `list.pop();` | `list.RemoveAt(list.Count - 1);` |
-| `list.length` | `list.length` | `list.Count` |
-
-### Common Array Operations
+### Creating Arrays
 
 ```javascript
 // JavaScript
-const arr = [1, 2, 3, 4, 5];
+const numbers = [1, 2, 3, 4, 5];                     // Array of numbers
+const names = ["John", "Jane", "Bob"];               // Array of strings
+const mixed = [1, "two", true];                      // Can mix types
 
-// Add elements
-arr.push(6);              // Add to end
-arr.unshift(0);           // Add to beginning
-arr.splice(2, 0, 1.5);    // Insert at index 2
-
-// Remove elements
-arr.pop();                // Remove from end
-arr.shift();              // Remove from beginning
-arr.splice(2, 1);         // Remove 1 element at index 2
-
-// Access
-const first = arr[0];
-const last = arr[arr.length - 1];
-
-// Find
-const index = arr.indexOf(3);
-const exists = arr.includes(3);
-const found = arr.find(x => x > 2);
-const foundIndex = arr.findIndex(x => x > 2);
-
-// Slice
-const slice = arr.slice(1, 3);  // [arr[1], arr[2]]
-
-// Copy
-const copy = [...arr];
-const copy2 = arr.slice();
+console.log(numbers);                                 // Output: [1, 2, 3, 4, 5]
+console.log(numbers[0]);                              // Output: 1 (first item)
+console.log(numbers[2]);                              // Output: 3 (third item)
+console.log(numbers.length);                          // Output: 5 (how many items)
 ```
 
 ```typescript
-// TypeScript
-const arr: number[] = [1, 2, 3, 4, 5];
+// TypeScript - specify the type of array
+const numbers: number[] = [1, 2, 3, 4, 5];           // Only numbers
+const names: string[] = ["John", "Jane", "Bob"];      // Only strings
 
-// Same as JavaScript with type safety
-arr.push(6);
-arr.unshift(0);
-arr.splice(2, 0, 1.5);
-
-arr.pop();
-arr.shift();
-arr.splice(2, 1);
-
-const first: number = arr[0];
-const last: number = arr[arr.length - 1];
-
-const index: number = arr.indexOf(3);
-const exists: boolean = arr.includes(3);
-const found: number | undefined = arr.find(x => x > 2);
-const foundIndex: number = arr.findIndex(x => x > 2);
-
-const slice: number[] = arr.slice(1, 3);
-
-const copy: number[] = [...arr];
+console.log(numbers[0]);                              // Output: 1
+console.log(numbers.length);                          // Output: 5
 ```
 
 ```csharp
 // C#
-var list = new List<int> {1, 2, 3, 4, 5};
+var numbers = new int[] {1, 2, 3, 4, 5};             // Array of integers
+var names = new string[] {"John", "Jane", "Bob"};     // Array of strings
 
-// Add elements
-list.Add(6);              // Add to end
-list.Insert(0, 0);        // Add to beginning
-list.Insert(2, 1);        // Insert at index 2
+// Shorter syntax
+int[] numbers2 = {1, 2, 3, 4, 5};
 
-// Remove elements
-list.RemoveAt(list.Count - 1);  // Remove from end
-list.RemoveAt(0);               // Remove from beginning
-list.RemoveAt(2);               // Remove at index 2
-list.Remove(3);                 // Remove first occurrence of value 3
-
-// Access
-var first = list[0];
-var last = list[list.Count - 1];
-var first2 = list.First();
-var last2 = list.Last();
-
-// Find
-var index = list.IndexOf(3);
-var exists = list.Contains(3);
-var found = list.Find(x => x > 2);
-var foundIndex = list.FindIndex(x => x > 2);
-
-// Slice
-var slice = list.GetRange(1, 2);  // Start at index 1, take 2 elements
-var slice2 = list.Skip(1).Take(2).ToList();
-
-// Copy
-var copy = new List<int>(list);
-var copy2 = list.ToList();
+Console.WriteLine(numbers[0]);                        // Output: 1
+Console.WriteLine(numbers.Length);                    // Output: 5 (capital L!)
 ```
 
-### Multi-dimensional Arrays
+### Adding and Removing Items
 
 ```javascript
 // JavaScript
-const matrix = [
-  [1, 2, 3],
-  [4, 5, 6],
-  [7, 8, 9]
-];
-console.log(matrix[1][2]);  // 6
+const fruits = ["apple", "banana"];
+
+// Add items
+fruits.push("orange");                                // Add to end
+console.log(fruits);                                  // Output: ["apple", "banana", "orange"]
+
+fruits.unshift("mango");                              // Add to beginning
+console.log(fruits);                                  // Output: ["mango", "apple", "banana", "orange"]
+
+// Remove items
+const lastFruit = fruits.pop();                       // Remove from end
+console.log(lastFruit);                               // Output: "orange"
+console.log(fruits);                                  // Output: ["mango", "apple", "banana"]
+
+const firstFruit = fruits.shift();                    // Remove from beginning
+console.log(firstFruit);                              // Output: "mango"
+console.log(fruits);                                  // Output: ["apple", "banana"]
 ```
 
 ```typescript
-// TypeScript
-const matrix: number[][] = [
-  [1, 2, 3],
-  [4, 5, 6],
-  [7, 8, 9]
-];
-console.log(matrix[1][2]);  // 6
+// TypeScript - same as JavaScript
+const fruits: string[] = ["apple", "banana"];
+
+fruits.push("orange");                                // Add to end
+console.log(fruits);                                  // Output: ["apple", "banana", "orange"]
+
+const lastFruit = fruits.pop();                       // Remove from end
+console.log(lastFruit);                               // Output: "orange"
+```
+
+```csharp
+// C# - use List<T> for dynamic arrays (can grow/shrink)
+var fruits = new List<string> {"apple", "banana"};
+
+// Add items
+fruits.Add("orange");                                 // Add to end
+Console.WriteLine(string.Join(", ", fruits));         // Output: apple, banana, orange
+
+fruits.Insert(0, "mango");                            // Add to beginning (at index 0)
+Console.WriteLine(string.Join(", ", fruits));         // Output: mango, apple, banana, orange
+
+// Remove items
+fruits.RemoveAt(fruits.Count - 1);                    // Remove from end
+Console.WriteLine(string.Join(", ", fruits));         // Output: mango, apple, banana
+
+fruits.RemoveAt(0);                                   // Remove from beginning
+Console.WriteLine(string.Join(", ", fruits));         // Output: apple, banana
+
+// Remove by value
+fruits.Remove("banana");                              // Removes "banana"
+Console.WriteLine(string.Join(", ", fruits));         // Output: apple
+```
+
+### Finding Items in Arrays
+
+```javascript
+// JavaScript
+const numbers = [10, 20, 30, 40, 50];
+
+// Check if item exists
+console.log(numbers.includes(30));                    // Output: true
+console.log(numbers.includes(100));                   // Output: false
+
+// Find the position (index) of an item
+console.log(numbers.indexOf(30));                     // Output: 2 (third position, starts at 0)
+console.log(numbers.indexOf(100));                    // Output: -1 (not found)
+
+// Find first item matching a condition
+const found = numbers.find(num => num > 25);
+console.log(found);                                   // Output: 30 (first number > 25)
+
+const foundIndex = numbers.findIndex(num => num > 25);
+console.log(foundIndex);                              // Output: 2 (position of 30)
+```
+
+```typescript
+// TypeScript - same as JavaScript
+const numbers: number[] = [10, 20, 30, 40, 50];
+
+console.log(numbers.includes(30));                    // Output: true
+console.log(numbers.indexOf(30));                     // Output: 2
+
+const found: number | undefined = numbers.find(num => num > 25);
+console.log(found);                                   // Output: 30
 ```
 
 ```csharp
 // C#
-// Jagged array
-int[][] matrix = new int[][] {
-    new int[] {1, 2, 3},
-    new int[] {4, 5, 6},
-    new int[] {7, 8, 9}
-};
-Console.WriteLine(matrix[1][2]);  // 6
+var numbers = new List<int> {10, 20, 30, 40, 50};
 
-// Multi-dimensional array
-int[,] matrix2 = new int[,] {
-    {1, 2, 3},
-    {4, 5, 6},
-    {7, 8, 9}
-};
-Console.WriteLine(matrix2[1, 2]);  // 6
+// Check if item exists
+Console.WriteLine(numbers.Contains(30));              // Output: True
+Console.WriteLine(numbers.Contains(100));             // Output: False
+
+// Find the position (index) of an item
+Console.WriteLine(numbers.IndexOf(30));               // Output: 2
+Console.WriteLine(numbers.IndexOf(100));              // Output: -1 (not found)
+
+// Find first item matching a condition
+var found = numbers.Find(num => num > 25);
+Console.WriteLine(found);                             // Output: 30
+
+var foundIndex = numbers.FindIndex(num => num > 25);
+Console.WriteLine(foundIndex);                        // Output: 2
 ```
 
 ---
 
 ## Loops & Iteration
 
-### For Loop
+**What it does**: Loops repeat code multiple times (like doing the same thing for each item in a list)
+
+### For Loop (Count from X to Y)
 
 ```javascript
 // JavaScript
-for (let i = 0; i < 10; i++) {
+// Loop from 0 to 4 (5 times)
+for (let i = 0; i < 5; i++) {
   console.log(i);
 }
+// Output:
+// 0
+// 1
+// 2
+// 3
+// 4
 
-// For...of (values)
-const arr = [1, 2, 3];
-for (const item of arr) {
-  console.log(item);
+// Loop from 1 to 10
+for (let i = 1; i <= 10; i++) {
+  console.log(i);
 }
-
-// For...in (indices/keys)
-for (const index in arr) {
-  console.log(index, arr[index]);
-}
+// Output: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 ```
 
 ```typescript
-// TypeScript
-for (let i: number = 0; i < 10; i++) {
+// TypeScript - same as JavaScript
+for (let i: number = 0; i < 5; i++) {
   console.log(i);
 }
-
-const arr: number[] = [1, 2, 3];
-for (const item of arr) {
-  console.log(item);
-}
-
-for (const index in arr) {
-  console.log(index, arr[index]);
-}
+// Output: 0, 1, 2, 3, 4
 ```
 
 ```csharp
 // C#
-for (int i = 0; i < 10; i++) {
+// Loop from 0 to 4 (5 times)
+for (int i = 0; i < 5; i++) {
     Console.WriteLine(i);
 }
+// Output:
+// 0
+// 1
+// 2
+// 3
+// 4
+```
 
-// Foreach
-var arr = new int[] {1, 2, 3};
-foreach (var item in arr) {
-    Console.WriteLine(item);
+### For Each (Loop Through Array)
+
+**What it does**: Go through each item in an array one by one
+
+```javascript
+// JavaScript
+const fruits = ["apple", "banana", "orange"];
+
+// Method 1: for...of (recommended)
+for (const fruit of fruits) {
+  console.log(fruit);
 }
+// Output:
+// apple
+// banana
+// orange
+
+// Method 2: forEach
+fruits.forEach(fruit => {
+  console.log(fruit);
+});
+// Output: (same as above)
+
+// With index (position)
+fruits.forEach((fruit, index) => {
+  console.log(`${index}: ${fruit}`);
+});
+// Output:
+// 0: apple
+// 1: banana
+// 2: orange
+```
+
+```typescript
+// TypeScript - same as JavaScript
+const fruits: string[] = ["apple", "banana", "orange"];
+
+for (const fruit of fruits) {
+  console.log(fruit);
+}
+// Output: apple, banana, orange
+
+fruits.forEach((fruit: string, index: number) => {
+  console.log(`${index}: ${fruit}`);
+});
+// Output: 0: apple, 1: banana, 2: orange
+```
+
+```csharp
+// C#
+var fruits = new List<string> {"apple", "banana", "orange"};
+
+// Method 1: foreach (recommended)
+foreach (var fruit in fruits) {
+    Console.WriteLine(fruit);
+}
+// Output:
+// apple
+// banana
+// orange
+
+// Method 2: ForEach with lambda
+fruits.ForEach(fruit => Console.WriteLine(fruit));
+// Output: (same as above)
 
 // With index
-foreach (var (item, index) in arr.Select((value, i) => (value, i))) {
-    Console.WriteLine($"{index}: {item}");
+for (int i = 0; i < fruits.Count; i++) {
+    Console.WriteLine($"{i}: {fruits[i]}");
 }
+// Output:
+// 0: apple
+// 1: banana
+// 2: orange
 ```
 
-### While Loop
+### While Loop (Repeat While Condition is True)
 
 ```javascript
 // JavaScript
-let i = 0;
-while (i < 10) {
-  console.log(i);
-  i++;
+let count = 0;
+while (count < 3) {
+  console.log(`Count is ${count}`);
+  count++;
 }
+// Output:
+// Count is 0
+// Count is 1
+// Count is 2
 
+// Do-while (runs at least once)
+let x = 0;
 do {
-  console.log(i);
-  i++;
-} while (i < 10);
+  console.log(`X is ${x}`);
+  x++;
+} while (x < 3);
+// Output: (same as above)
 ```
 
 ```typescript
-// TypeScript
-let i: number = 0;
-while (i < 10) {
-  console.log(i);
-  i++;
+// TypeScript - same as JavaScript
+let count: number = 0;
+while (count < 3) {
+  console.log(`Count is ${count}`);
+  count++;
 }
-
-do {
-  console.log(i);
-  i++;
-} while (i < 10);
+// Output: Count is 0, Count is 1, Count is 2
 ```
 
 ```csharp
 // C#
-int i = 0;
-while (i < 10) {
-    Console.WriteLine(i);
-    i++;
+int count = 0;
+while (count < 3) {
+    Console.WriteLine($"Count is {count}");
+    count++;
 }
+// Output:
+// Count is 0
+// Count is 1
+// Count is 2
 
+// Do-while
+int x = 0;
 do {
-    Console.WriteLine(i);
-    i++;
-} while (i < 10);
+    Console.WriteLine($"X is {x}");
+    x++;
+} while (x < 3);
 ```
 
-### ForEach
+### Break and Continue
+
+**What it does**: `break` exits the loop, `continue` skips to next iteration
 
 ```javascript
 // JavaScript
-const arr = [1, 2, 3];
-arr.forEach((item, index) => {
-  console.log(index, item);
-});
+// Break - stop the loop
+for (let i = 0; i < 10; i++) {
+  if (i === 5) break;                                 // Stop when i is 5
+  console.log(i);
+}
+// Output: 0, 1, 2, 3, 4 (stops at 5)
+
+// Continue - skip current iteration
+for (let i = 0; i < 5; i++) {
+  if (i === 2) continue;                              // Skip when i is 2
+  console.log(i);
+}
+// Output: 0, 1, 3, 4 (skips 2)
 ```
 
 ```typescript
-// TypeScript
-const arr: number[] = [1, 2, 3];
-arr.forEach((item: number, index: number) => {
-  console.log(index, item);
-});
+// TypeScript - same as JavaScript
+for (let i = 0; i < 10; i++) {
+  if (i === 5) break;
+  console.log(i);
+}
+// Output: 0, 1, 2, 3, 4
 ```
 
 ```csharp
-// C#
-var arr = new List<int> {1, 2, 3};
-arr.ForEach(item => {
-    Console.WriteLine(item);
-});
+// C# - same keywords
+for (int i = 0; i < 10; i++) {
+    if (i == 5) break;
+    Console.WriteLine(i);
+}
+// Output: 0, 1, 2, 3, 4
 
-// Or with LINQ
-arr.ForEach(item => Console.WriteLine(item));
+for (int i = 0; i < 5; i++) {
+    if (i == 2) continue;
+    Console.WriteLine(i);
+}
+// Output: 0, 1, 3, 4
 ```
-
-### Break & Continue
-
-| JavaScript | TypeScript | C# |
-|------------|------------|-----|
-| `break;` | `break;` | `break;` |
-| `continue;` | `continue;` | `continue;` |
 
 ---
 
 ## Functions & Methods
 
-### Function Declaration
+**What it does**: Functions are reusable blocks of code that do a specific task
+
+### Basic Functions
 
 ```javascript
 // JavaScript
+// Function that adds two numbers
 function add(a, b) {
   return a + b;
 }
 
-const multiply = function(a, b) {
-  return a * b;
-};
+console.log(add(5, 3));                               // Output: 8
+console.log(add(10, 20));                             // Output: 30
 
-const divide = (a, b) => a / b;
+// Function that doesn't return anything
+function greet(name) {
+  console.log(`Hello, ${name}!`);
+}
 
-const subtract = (a, b) => {
-  return a - b;
-};
+greet("John");                                        // Output: Hello, John!
+
+// Arrow function (shorter way)
+const multiply = (a, b) => a * b;
+console.log(multiply(4, 5));                          // Output: 20
 ```
 
 ```typescript
-// TypeScript
+// TypeScript - specify parameter types and return type
 function add(a: number, b: number): number {
   return a + b;
 }
 
-const multiply = function(a: number, b: number): number {
-  return a * b;
-};
+console.log(add(5, 3));                               // Output: 8
 
-const divide = (a: number, b: number): number => a / b;
+// Function with no return value (void)
+function greet(name: string): void {
+  console.log(`Hello, ${name}!`);
+}
 
-const subtract = (a: number, b: number): number => {
-  return a - b;
-};
+greet("John");                                        // Output: Hello, John!
+
+// Arrow function
+const multiply = (a: number, b: number): number => a * b;
+console.log(multiply(4, 5));                          // Output: 20
 ```
 
 ```csharp
-// C#
+// C# - specify parameter types and return type
 public int Add(int a, int b) {
     return a + b;
 }
 
-// Expression-bodied method
-public int Multiply(int a, int b) => a * b;
+Console.WriteLine(Add(5, 3));                         // Output: 8
 
-// Local function
-int Subtract(int a, int b) {
-    return a - b;
+// Method with no return value (void)
+public void Greet(string name) {
+    Console.WriteLine($"Hello, {name}!");
 }
 
-// Lambda
-Func<int, int, int> divide = (a, b) => a / b;
+Greet("John");                                        // Output: Hello, John!
+
+// Expression-bodied method (shorter)
+public int Multiply(int a, int b) => a * b;
+Console.WriteLine(Multiply(4, 5));                    // Output: 20
+
+// Lambda (like arrow function)
+Func<int, int, int> multiply = (a, b) => a * b;
+Console.WriteLine(multiply(4, 5));                    // Output: 20
 ```
 
-### Optional Parameters
+### Functions with Optional Parameters
+
+**What it does**: Parameters that have default values if not provided
 
 ```javascript
 // JavaScript
 function greet(name = "Guest") {
-  return `Hello, ${name}`;
+  return `Hello, ${name}!`;
 }
+
+console.log(greet("John"));                           // Output: Hello, John!
+console.log(greet());                                 // Output: Hello, Guest!
 ```
 
 ```typescript
 // TypeScript
 function greet(name: string = "Guest"): string {
-  return `Hello, ${name}`;
+  return `Hello, ${name}!`;
 }
 
+console.log(greet("John"));                           // Output: Hello, John!
+console.log(greet());                                 // Output: Hello, Guest!
+
+// Using ? for optional (no default value)
 function greet2(name?: string): string {
-  return `Hello, ${name ?? "Guest"}`;
+  return `Hello, ${name ?? "Guest"}!`;
 }
 ```
 
 ```csharp
 // C#
 public string Greet(string name = "Guest") {
-    return $"Hello, {name}";
+    return $"Hello, {name}!";
 }
 
-public string Greet2(string? name = null) {
-    return $"Hello, {name ?? "Guest"}";
-}
+Console.WriteLine(Greet("John"));                     // Output: Hello, John!
+Console.WriteLine(Greet());                           // Output: Hello, Guest!
 ```
 
-### Rest/Params Parameters
+### Functions with Multiple Parameters (Variable Length)
+
+**What it does**: Accept any number of parameters
 
 ```javascript
-// JavaScript
+// JavaScript - use ...rest
 function sum(...numbers) {
-  return numbers.reduce((a, b) => a + b, 0);
+  let total = 0;
+  for (const num of numbers) {
+    total += num;
+  }
+  return total;
 }
-sum(1, 2, 3, 4);  // 10
+
+console.log(sum(1, 2, 3));                            // Output: 6
+console.log(sum(1, 2, 3, 4, 5));                      // Output: 15
+console.log(sum(10, 20));                             // Output: 30
 ```
 
 ```typescript
 // TypeScript
 function sum(...numbers: number[]): number {
-  return numbers.reduce((a, b) => a + b, 0);
+  let total = 0;
+  for (const num of numbers) {
+    total += num;
+  }
+  return total;
 }
-sum(1, 2, 3, 4);  // 10
+
+console.log(sum(1, 2, 3));                            // Output: 6
+console.log(sum(1, 2, 3, 4, 5));                      // Output: 15
 ```
 
 ```csharp
-// C#
+// C# - use params
 public int Sum(params int[] numbers) {
-    return numbers.Sum();
-}
-Sum(1, 2, 3, 4);  // 10
-```
-
-### Named Parameters
-
-```javascript
-// JavaScript (using object destructuring)
-function createUser({name, age, email}) {
-  return {name, age, email};
-}
-createUser({name: "John", age: 30, email: "john@example.com"});
-```
-
-```typescript
-// TypeScript
-interface UserParams {
-  name: string;
-  age: number;
-  email: string;
+    int total = 0;
+    foreach (var num in numbers) {
+        total += num;
+    }
+    return total;
+    // Or simply: return numbers.Sum();
 }
 
-function createUser({name, age, email}: UserParams): UserParams {
-  return {name, age, email};
-}
-createUser({name: "John", age: 30, email: "john@example.com"});
-```
-
-```csharp
-// C#
-public User CreateUser(string name, int age, string email) {
-    return new User { Name = name, Age = age, Email = email };
-}
-// Named arguments
-CreateUser(name: "John", age: 30, email: "john@example.com");
-CreateUser(email: "john@example.com", name: "John", age: 30);
+Console.WriteLine(Sum(1, 2, 3));                      // Output: 6
+Console.WriteLine(Sum(1, 2, 3, 4, 5));                // Output: 15
+Console.WriteLine(Sum(10, 20));                       // Output: 30
 ```
 
 ---
 
 ## Classes & Objects
 
-### Class Declaration
+**What it does**: Classes are blueprints for creating objects. Objects store related data and functions together.
+
+### Creating a Basic Class
 
 ```javascript
 // JavaScript
@@ -585,19 +735,22 @@ class Person {
   }
 
   greet() {
-    return `Hello, I'm ${this.name}`;
-  }
-
-  static create(name, age) {
-    return new Person(name, age);
+    return `Hi, I'm ${this.name} and I'm ${this.age} years old`;
   }
 }
 
-const person = new Person("John", 30);
+// Create an object from the class
+const person1 = new Person("John", 30);
+console.log(person1.name);                            // Output: John
+console.log(person1.age);                             // Output: 30
+console.log(person1.greet());                         // Output: Hi, I'm John and I'm 30 years old
+
+const person2 = new Person("Jane", 25);
+console.log(person2.greet());                         // Output: Hi, I'm Jane and I'm 25 years old
 ```
 
 ```typescript
-// TypeScript
+// TypeScript - define property types
 class Person {
   name: string;
   age: number;
@@ -608,15 +761,12 @@ class Person {
   }
 
   greet(): string {
-    return `Hello, I'm ${this.name}`;
-  }
-
-  static create(name: string, age: number): Person {
-    return new Person(name, age);
+    return `Hi, I'm ${this.name} and I'm ${this.age} years old`;
   }
 }
 
-const person = new Person("John", 30);
+const person1 = new Person("John", 30);
+console.log(person1.greet());                         // Output: Hi, I'm John and I'm 30 years old
 ```
 
 ```csharp
@@ -631,159 +781,20 @@ public class Person {
     }
 
     public string Greet() {
-        return $"Hello, I'm {Name}";
-    }
-
-    public static Person Create(string name, int age) {
-        return new Person(name, age);
+        return $"Hi, I'm {Name} and I'm {Age} years old";
     }
 }
 
-var person = new Person("John", 30);
+// Create an object
+var person1 = new Person("John", 30);
+Console.WriteLine(person1.Name);                      // Output: John
+Console.WriteLine(person1.Age);                       // Output: 30
+Console.WriteLine(person1.Greet());                   // Output: Hi, I'm John and I'm 30 years old
 ```
 
-### Properties & Access Modifiers
+### Inheritance (Creating Child Classes)
 
-```javascript
-// JavaScript (ES2022+)
-class User {
-  #privateField;      // Private field
-  publicField;        // Public field
-
-  constructor(name) {
-    this.#privateField = name;
-    this.publicField = "public";
-  }
-
-  #privateMethod() {
-    return "private";
-  }
-
-  publicMethod() {
-    return this.#privateMethod();
-  }
-}
-```
-
-```typescript
-// TypeScript
-class User {
-  private privateField: string;
-  protected protectedField: string;
-  public publicField: string;
-
-  constructor(name: string) {
-    this.privateField = name;
-    this.protectedField = "protected";
-    this.publicField = "public";
-  }
-
-  private privateMethod(): string {
-    return "private";
-  }
-
-  public publicMethod(): string {
-    return this.privateMethod();
-  }
-}
-```
-
-```csharp
-// C#
-public class User {
-    private string privateField;
-    protected string protectedField;
-    public string PublicField { get; set; }
-
-    public User(string name) {
-        privateField = name;
-        protectedField = "protected";
-        PublicField = "public";
-    }
-
-    private string PrivateMethod() {
-        return "private";
-    }
-
-    public string PublicMethod() {
-        return PrivateMethod();
-    }
-}
-```
-
-### Getters & Setters
-
-```javascript
-// JavaScript
-class User {
-  constructor(firstName, lastName) {
-    this._firstName = firstName;
-    this._lastName = lastName;
-  }
-
-  get fullName() {
-    return `${this._firstName} ${this._lastName}`;
-  }
-
-  set fullName(value) {
-    [this._firstName, this._lastName] = value.split(' ');
-  }
-}
-```
-
-```typescript
-// TypeScript
-class User {
-  private _firstName: string;
-  private _lastName: string;
-
-  constructor(firstName: string, lastName: string) {
-    this._firstName = firstName;
-    this._lastName = lastName;
-  }
-
-  get fullName(): string {
-    return `${this._firstName} ${this._lastName}`;
-  }
-
-  set fullName(value: string) {
-    [this._firstName, this._lastName] = value.split(' ');
-  }
-}
-```
-
-```csharp
-// C#
-public class User {
-    private string _firstName;
-    private string _lastName;
-
-    public User(string firstName, string lastName) {
-        _firstName = firstName;
-        _lastName = lastName;
-    }
-
-    public string FullName {
-        get { return $"{_firstName} {_lastName}"; }
-        set {
-            var parts = value.Split(' ');
-            _firstName = parts[0];
-            _lastName = parts[1];
-        }
-    }
-
-    // Auto-property
-    public string Email { get; set; }
-
-    // Read-only property
-    public string Id { get; }
-
-    // Init-only property (C# 9+)
-    public string Username { get; init; }
-}
-```
-
-### Inheritance
+**What it does**: A child class inherits properties and methods from a parent class
 
 ```javascript
 // JavaScript
@@ -799,14 +810,21 @@ class Animal {
 
 class Dog extends Animal {
   constructor(name, breed) {
-    super(name);
+    super(name);                                      // Call parent constructor
     this.breed = breed;
   }
 
   speak() {
-    return `${this.name} barks`;
+    return `${this.name} barks!`;
   }
 }
+
+const animal = new Animal("Generic Animal");
+console.log(animal.speak());                          // Output: Generic Animal makes a sound
+
+const dog = new Dog("Buddy", "Golden Retriever");
+console.log(dog.speak());                             // Output: Buddy barks!
+console.log(dog.breed);                               // Output: Golden Retriever
 ```
 
 ```typescript
@@ -832,9 +850,12 @@ class Dog extends Animal {
   }
 
   speak(): string {
-    return `${this.name} barks`;
+    return `${this.name} barks!`;
   }
 }
+
+const dog = new Dog("Buddy", "Golden Retriever");
+console.log(dog.speak());                             // Output: Buddy barks!
 ```
 
 ```csharp
@@ -846,7 +867,7 @@ public class Animal {
         Name = name;
     }
 
-    public virtual string Speak() {
+    public virtual string Speak() {                   // 'virtual' allows overriding
         return $"{Name} makes a sound";
     }
 }
@@ -858,1732 +879,1082 @@ public class Dog : Animal {
         Breed = breed;
     }
 
-    public override string Speak() {
-        return $"{Name} barks";
+    public override string Speak() {                  // 'override' replaces parent method
+        return $"{Name} barks!";
     }
 }
+
+var animal = new Animal("Generic Animal");
+Console.WriteLine(animal.Speak());                    // Output: Generic Animal makes a sound
+
+var dog = new Dog("Buddy", "Golden Retriever");
+Console.WriteLine(dog.Speak());                       // Output: Buddy barks!
+Console.WriteLine(dog.Breed);                         // Output: Golden Retriever
 ```
 
 ---
 
 ## Conditionals
 
-### If-Else
+**What it does**: Make decisions in your code (if this is true, do that)
+
+### If-Else Statements
 
 ```javascript
 // JavaScript
-if (condition) {
-  // code
-} else if (otherCondition) {
-  // code
+const age = 18;
+
+if (age >= 18) {
+  console.log("You are an adult");                    // Output: You are an adult
 } else {
-  // code
+  console.log("You are a minor");
 }
 
-// Ternary
-const result = condition ? "yes" : "no";
+// Multiple conditions
+const score = 85;
 
-// Nullish coalescing
-const value = null ?? "default";
+if (score >= 90) {
+  console.log("Grade: A");
+} else if (score >= 80) {
+  console.log("Grade: B");                            // Output: Grade: B
+} else if (score >= 70) {
+  console.log("Grade: C");
+} else {
+  console.log("Grade: F");
+}
 
-// Optional chaining
-const name = user?.profile?.name;
+// Ternary operator (shorthand)
+const status = age >= 18 ? "adult" : "minor";
+console.log(status);                                  // Output: adult
 ```
 
 ```typescript
-// TypeScript
-if (condition) {
-  // code
-} else if (otherCondition) {
-  // code
+// TypeScript - same as JavaScript
+const age: number = 18;
+
+if (age >= 18) {
+  console.log("You are an adult");                    // Output: You are an adult
 } else {
-  // code
+  console.log("You are a minor");
 }
 
-const result: string = condition ? "yes" : "no";
-
-const value: string = null ?? "default";
-
-const name: string | undefined = user?.profile?.name;
+const status: string = age >= 18 ? "adult" : "minor";
+console.log(status);                                  // Output: adult
 ```
 
 ```csharp
 // C#
-if (condition) {
-    // code
-} else if (otherCondition) {
-    // code
+var age = 18;
+
+if (age >= 18) {
+    Console.WriteLine("You are an adult");            // Output: You are an adult
 } else {
-    // code
+    Console.WriteLine("You are a minor");
 }
 
-// Ternary
-var result = condition ? "yes" : "no";
+// Multiple conditions
+var score = 85;
 
-// Null coalescing
-var value = nullableValue ?? "default";
+if (score >= 90) {
+    Console.WriteLine("Grade: A");
+} else if (score >= 80) {
+    Console.WriteLine("Grade: B");                    // Output: Grade: B
+} else if (score >= 70) {
+    Console.WriteLine("Grade: C");
+} else {
+    Console.WriteLine("Grade: F");
+}
 
-// Null conditional
-var name = user?.Profile?.Name;
+// Ternary operator
+var status = age >= 18 ? "adult" : "minor";
+Console.WriteLine(status);                            // Output: adult
 ```
 
-### Switch Statement
+### Switch Statement (Multiple Options)
+
+**What it does**: Check a value against multiple possible cases
 
 ```javascript
 // JavaScript
-switch (value) {
+const day = "Monday";
+
+switch (day) {
+  case "Monday":
+    console.log("Start of the work week");            // Output: Start of the work week
+    break;
+  case "Friday":
+    console.log("Almost weekend!");
+    break;
+  case "Saturday":
+  case "Sunday":
+    console.log("It's the weekend!");
+    break;
+  default:
+    console.log("It's a regular day");
+}
+
+// With numbers
+const number = 2;
+
+switch (number) {
   case 1:
     console.log("One");
     break;
   case 2:
-    console.log("Two");
+    console.log("Two");                               // Output: Two
     break;
   default:
-    console.log("Other");
+    console.log("Other number");
 }
 ```
 
 ```typescript
-// TypeScript
-switch (value) {
-  case 1:
-    console.log("One");
+// TypeScript - same as JavaScript
+const day: string = "Monday";
+
+switch (day) {
+  case "Monday":
+    console.log("Start of the work week");            // Output: Start of the work week
     break;
-  case 2:
-    console.log("Two");
+  case "Friday":
+    console.log("Almost weekend!");
     break;
   default:
-    console.log("Other");
+    console.log("It's a regular day");
 }
 ```
 
 ```csharp
 // C#
-switch (value) {
-    case 1:
-        Console.WriteLine("One");
+var day = "Monday";
+
+switch (day) {
+    case "Monday":
+        Console.WriteLine("Start of the work week");  // Output: Start of the work week
         break;
-    case 2:
-        Console.WriteLine("Two");
+    case "Friday":
+        Console.WriteLine("Almost weekend!");
+        break;
+    case "Saturday":
+    case "Sunday":
+        Console.WriteLine("It's the weekend!");
         break;
     default:
-        Console.WriteLine("Other");
+        Console.WriteLine("It's a regular day");
         break;
 }
 
-// Switch expression (C# 8+)
-var message = value switch {
-    1 => "One",
-    2 => "Two",
-    _ => "Other"
+// Modern C# switch expression (shorter)
+var message = day switch {
+    "Monday" => "Start of the work week",
+    "Friday" => "Almost weekend!",
+    "Saturday" or "Sunday" => "It's the weekend!",
+    _ => "It's a regular day"
 };
-
-// Pattern matching
-var result = obj switch {
-    string s => $"String: {s}",
-    int i => $"Int: {i}",
-    null => "Null",
-    _ => "Unknown"
-};
+Console.WriteLine(message);                           // Output: Start of the work week
 ```
 
 ---
 
 ## String Operations
 
-### String Methods
+**What it does**: Common operations you can do with text (strings)
+
+### Basic String Methods
 
 ```javascript
 // JavaScript
-const str = "Hello World";
+const text = "Hello World";
 
-str.length                    // 11
-str.toUpperCase()             // "HELLO WORLD"
-str.toLowerCase()             // "hello world"
-str.trim()                    // Remove whitespace
-str.includes("World")         // true
-str.startsWith("Hello")       // true
-str.endsWith("World")         // true
-str.indexOf("World")          // 6
-str.substring(0, 5)           // "Hello"
-str.slice(0, 5)               // "Hello"
-str.split(" ")                // ["Hello", "World"]
-str.replace("World", "JS")    // "Hello JS"
-str.replaceAll("o", "0")      // "Hell0 W0rld"
-str.charAt(0)                 // "H"
-str.repeat(2)                 // "Hello WorldHello World"
-str.padStart(15, "*")         // "****Hello World"
-str.padEnd(15, "*")           // "Hello World****"
+console.log(text.length);                             // Output: 11 (number of characters)
+console.log(text.toUpperCase());                      // Output: HELLO WORLD
+console.log(text.toLowerCase());                      // Output: hello world
+
+// Check if string contains something
+console.log(text.includes("World"));                  // Output: true
+console.log(text.includes("xyz"));                    // Output: false
+
+// Check start and end
+console.log(text.startsWith("Hello"));                // Output: true
+console.log(text.endsWith("World"));                  // Output: true
+
+// Find position
+console.log(text.indexOf("World"));                   // Output: 6 (position of "World")
+console.log(text.indexOf("xyz"));                     // Output: -1 (not found)
+
+// Get part of string
+console.log(text.substring(0, 5));                    // Output: Hello (from 0 to 5)
+console.log(text.slice(6));                           // Output: World (from 6 to end)
+
+// Split into array
+const words = text.split(" ");
+console.log(words);                                   // Output: ["Hello", "World"]
+
+// Replace text
+console.log(text.replace("World", "JavaScript"));     // Output: Hello JavaScript
+
+// Remove whitespace
+const messy = "  hello  ";
+console.log(messy.trim());                            // Output: "hello"
 ```
 
 ```typescript
-// TypeScript
-const str: string = "Hello World";
+// TypeScript - same as JavaScript
+const text: string = "Hello World";
 
-str.length                    // 11
-str.toUpperCase()             // "HELLO WORLD"
-str.toLowerCase()             // "hello world"
-str.trim()                    // Remove whitespace
-str.includes("World")         // true
-str.startsWith("Hello")       // true
-str.endsWith("World")         // true
-str.indexOf("World")          // 6
-str.substring(0, 5)           // "Hello"
-str.slice(0, 5)               // "Hello"
-str.split(" ")                // ["Hello", "World"]
-str.replace("World", "TS")    // "Hello TS"
-str.replaceAll("o", "0")      // "Hell0 W0rld"
-str.charAt(0)                 // "H"
+console.log(text.length);                             // Output: 11
+console.log(text.toUpperCase());                      // Output: HELLO WORLD
+console.log(text.includes("World"));                  // Output: true
+console.log(text.substring(0, 5));                    // Output: Hello
 ```
 
 ```csharp
 // C#
-var str = "Hello World";
+var text = "Hello World";
 
-str.Length                        // 11
-str.ToUpper()                     // "HELLO WORLD"
-str.ToLower()                     // "hello world"
-str.Trim()                        // Remove whitespace
-str.Contains("World")             // true
-str.StartsWith("Hello")           // true
-str.EndsWith("World")             // true
-str.IndexOf("World")              // 6
-str.Substring(0, 5)               // "Hello"
-str.Split(" ")                    // ["Hello", "World"]
-str.Replace("World", "C#")        // "Hello C#"
-str[0]                            // 'H'
-string.Concat(str, str)           // "Hello WorldHello World"
-str.PadLeft(15, '*')              // "****Hello World"
-str.PadRight(15, '*')             // "Hello World****"
+Console.WriteLine(text.Length);                       // Output: 11 (capital L!)
+Console.WriteLine(text.ToUpper());                    // Output: HELLO WORLD
+Console.WriteLine(text.ToLower());                    // Output: hello world
+
+// Check if string contains something
+Console.WriteLine(text.Contains("World"));            // Output: True
+Console.WriteLine(text.Contains("xyz"));              // Output: False
+
+// Check start and end
+Console.WriteLine(text.StartsWith("Hello"));          // Output: True
+Console.WriteLine(text.EndsWith("World"));            // Output: True
+
+// Find position
+Console.WriteLine(text.IndexOf("World"));             // Output: 6
+Console.WriteLine(text.IndexOf("xyz"));               // Output: -1
+
+// Get part of string
+Console.WriteLine(text.Substring(0, 5));              // Output: Hello
+Console.WriteLine(text.Substring(6));                 // Output: World
+
+// Split into array
+var words = text.Split(" ");
+Console.WriteLine(string.Join(", ", words));          // Output: Hello, World
+
+// Replace text
+Console.WriteLine(text.Replace("World", "C#"));       // Output: Hello C#
+
+// Remove whitespace
+var messy = "  hello  ";
+Console.WriteLine(messy.Trim());                      // Output: "hello"
 ```
 
-### String Interpolation
+### Combining Strings
 
 ```javascript
 // JavaScript
-const name = "John";
-const age = 30;
-const message = `${name} is ${age} years old`;
+const first = "John";
+const last = "Doe";
+
+// Method 1: Concatenation with +
+console.log(first + " " + last);                      // Output: John Doe
+
+// Method 2: Template literals (better)
+console.log(`${first} ${last}`);                      // Output: John Doe
+console.log(`Name: ${first} ${last}`);                // Output: Name: John Doe
 ```
 
 ```typescript
-// TypeScript
-const name: string = "John";
-const age: number = 30;
-const message: string = `${name} is ${age} years old`;
+// TypeScript - same as JavaScript
+const first: string = "John";
+const last: string = "Doe";
+
+console.log(`${first} ${last}`);                      // Output: John Doe
 ```
 
 ```csharp
 // C#
-var name = "John";
-var age = 30;
-var message = $"{name} is {age} years old";
-```
+var first = "John";
+var last = "Doe";
 
-### Multi-line Strings
+// Method 1: Concatenation with +
+Console.WriteLine(first + " " + last);                // Output: John Doe
 
-```javascript
-// JavaScript
-const multiline = `
-  Line 1
-  Line 2
-  Line 3
-`;
-```
-
-```typescript
-// TypeScript
-const multiline: string = `
-  Line 1
-  Line 2
-  Line 3
-`;
-```
-
-```csharp
-// C#
-var multiline = @"
-  Line 1
-  Line 2
-  Line 3
-";
-
-// Or (C# 11+)
-var multiline2 = """
-  Line 1
-  Line 2
-  Line 3
-  """;
+// Method 2: String interpolation (better)
+Console.WriteLine($"{first} {last}");                 // Output: John Doe
+Console.WriteLine($"Name: {first} {last}");           // Output: Name: John Doe
 ```
 
 ---
 
 ## Null Handling
 
-### Null/Undefined Checks
+**What it does**: Handle missing or empty values safely (avoid crashes)
+
+### Checking for Null/Undefined
 
 ```javascript
 // JavaScript
-if (value === null) { }
-if (value === undefined) { }
-if (value == null) { }  // Checks both null and undefined
-if (!value) { }         // Checks falsy values
+let name = null;
+let age = undefined;
+let email = "test@test.com";
 
-// Nullish coalescing
-const result = value ?? "default";
+// Check for null or undefined
+if (name === null) {
+  console.log("Name is null");                        // Output: Name is null
+}
 
-// Optional chaining
-const name = user?.name;
-const street = user?.address?.street;
+if (age === undefined) {
+  console.log("Age is undefined");                    // Output: Age is undefined
+}
+
+// Check for both null and undefined
+if (name == null) {
+  console.log("Name is null or undefined");           // Output: Name is null or undefined
+}
+
+// Provide default value if null/undefined
+const displayName = name ?? "Guest";
+console.log(displayName);                             // Output: Guest
+
+const displayAge = age ?? 0;
+console.log(displayAge);                              // Output: 0
+
+// Safe navigation (optional chaining)
+const user = { name: "John", address: { city: "NYC" } };
+console.log(user?.address?.city);                     // Output: NYC
+
+const missingUser = null;
+console.log(missingUser?.address?.city);              // Output: undefined (no error!)
 ```
 
 ```typescript
 // TypeScript
-if (value === null) { }
-if (value === undefined) { }
-if (value == null) { }
+let name: string | null = null;
+let age: number | undefined = undefined;
 
-const result: string = value ?? "default";
+// Nullish coalescing
+const displayName: string = name ?? "Guest";
+console.log(displayName);                             // Output: Guest
 
-const name: string | undefined = user?.name;
-const street: string | undefined = user?.address?.street;
-
-// Type guards
-if (value !== null && value !== undefined) {
-  // value is not null or undefined here
+// Optional chaining
+interface User {
+  name: string;
+  address?: {
+    city: string;
+  };
 }
+
+const user: User = { name: "John", address: { city: "NYC" } };
+console.log(user?.address?.city);                     // Output: NYC
 ```
 
 ```csharp
 // C#
-if (value == null) { }
-if (value is null) { }
+string? name = null;                                  // ? means nullable
+int? age = null;
 
-// Null coalescing
-var result = value ?? "default";
-
-// Null conditional
-var name = user?.Name;
-var street = user?.Address?.Street;
-
-// Null forgiving operator
-var length = value!.Length;  // Assert not null
-
-// Pattern matching
-if (value is not null) {
-    // value is not null here
+// Check for null
+if (name == null) {
+    Console.WriteLine("Name is null");                // Output: Name is null
 }
+
+// Provide default value if null
+var displayName = name ?? "Guest";
+Console.WriteLine(displayName);                       // Output: Guest
+
+var displayAge = age ?? 0;
+Console.WriteLine(displayAge);                        // Output: 0
+
+// Safe navigation (null conditional operator)
+class Address {
+    public string? City { get; set; }
+}
+
+class User {
+    public string? Name { get; set; }
+    public Address? Address { get; set; }
+}
+
+var user = new User { Name = "John", Address = new Address { City = "NYC" } };
+Console.WriteLine(user?.Address?.City);               // Output: NYC
+
+User? missingUser = null;
+Console.WriteLine(missingUser?.Address?.City);        // Output: (nothing - no error!)
 ```
 
 ---
 
 ## Async/Await
 
-### Promises & Async/Await
+**What it does**: Handle operations that take time (like fetching data from internet) without freezing your program
+
+### Basic Async/Await
 
 ```javascript
 // JavaScript
-// Promise
+// Function that takes time (simulated with setTimeout)
 function fetchData() {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => resolve("Data"), 1000);
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve("Data loaded!");
+    }, 2000);                                         // Wait 2 seconds
   });
 }
 
-// Async/Await
+// Using async/await (cleaner way)
 async function getData() {
+  console.log("Fetching data...");
+  const data = await fetchData();                     // Wait for data
+  console.log(data);                                  // Output: Data loaded!
+  console.log("Done!");
+}
+
+getData();
+// Output:
+// Fetching data...
+// (waits 2 seconds)
+// Data loaded!
+// Done!
+
+// With error handling
+async function getDataSafe() {
   try {
     const data = await fetchData();
     console.log(data);
   } catch (error) {
-    console.error(error);
+    console.log("Error:", error);
   }
-}
-
-// Multiple awaits
-async function getMultipleData() {
-  const [data1, data2] = await Promise.all([
-    fetchData1(),
-    fetchData2()
-  ]);
 }
 ```
 
 ```typescript
 // TypeScript
 function fetchData(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => resolve("Data"), 1000);
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve("Data loaded!");
+    }, 2000);
   });
 }
 
 async function getData(): Promise<void> {
-  try {
-    const data: string = await fetchData();
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
+  console.log("Fetching data...");
+  const data: string = await fetchData();
+  console.log(data);                                  // Output: Data loaded!
 }
 
-async function getMultipleData(): Promise<void> {
-  const [data1, data2] = await Promise.all([
-    fetchData1(),
-    fetchData2()
-  ]);
-}
+getData();
 ```
 
 ```csharp
 // C#
 public async Task<string> FetchDataAsync() {
-    await Task.Delay(1000);
-    return "Data";
+    await Task.Delay(2000);                           // Wait 2 seconds
+    return "Data loaded!";
 }
 
 public async Task GetDataAsync() {
+    Console.WriteLine("Fetching data...");
+    var data = await FetchDataAsync();                // Wait for data
+    Console.WriteLine(data);                          // Output: Data loaded!
+    Console.WriteLine("Done!");
+}
+
+// Call it
+GetDataAsync().Wait();
+// Output:
+// Fetching data...
+// (waits 2 seconds)
+// Data loaded!
+// Done!
+
+// With error handling
+public async Task GetDataSafeAsync() {
     try {
         var data = await FetchDataAsync();
         Console.WriteLine(data);
     } catch (Exception error) {
-        Console.Error.WriteLine(error);
+        Console.WriteLine($"Error: {error.Message}");
     }
 }
-
-// Multiple awaits
-public async Task GetMultipleDataAsync() {
-    var tasks = new[] {
-        FetchData1Async(),
-        FetchData2Async()
-    };
-    var results = await Task.WhenAll(tasks);
-}
-
-// ConfigureAwait
-var data = await FetchDataAsync().ConfigureAwait(false);
 ```
 
 ---
 
 ## Error Handling
 
+**What it does**: Catch and handle errors gracefully (so your program doesn't crash)
+
 ### Try-Catch
 
 ```javascript
 // JavaScript
 try {
-  // code
+  // Code that might cause an error
+  const result = 10 / 0;
+  console.log(result);                                // Output: Infinity
+
+  // This will cause an error
+  const data = JSON.parse("invalid json");            // Error!
 } catch (error) {
-  console.error(error.message);
+  console.log("An error occurred:", error.message);   // Output: An error occurred: ...
 } finally {
-  // cleanup
+  console.log("This always runs");                    // Output: This always runs
 }
 
-// Throwing errors
-throw new Error("Something went wrong");
-throw new TypeError("Invalid type");
+// Throwing your own errors
+function divide(a, b) {
+  if (b === 0) {
+    throw new Error("Cannot divide by zero!");
+  }
+  return a / b;
+}
+
+try {
+  console.log(divide(10, 2));                         // Output: 5
+  console.log(divide(10, 0));                         // Throws error
+} catch (error) {
+  console.log("Error:", error.message);               // Output: Error: Cannot divide by zero!
+}
 ```
 
 ```typescript
 // TypeScript
 try {
-  // code
+  const data = JSON.parse("invalid json");
 } catch (error) {
   if (error instanceof Error) {
-    console.error(error.message);
+    console.log("Error:", error.message);
   }
 } finally {
-  // cleanup
+  console.log("This always runs");
 }
 
-throw new Error("Something went wrong");
+function divide(a: number, b: number): number {
+  if (b === 0) {
+    throw new Error("Cannot divide by zero!");
+  }
+  return a / b;
+}
 ```
 
 ```csharp
 // C#
 try {
-    // code
+    // Code that might cause an error
+    var data = int.Parse("not a number");             // Error!
 } catch (Exception ex) {
-    Console.Error.WriteLine(ex.Message);
+    Console.WriteLine($"An error occurred: {ex.Message}");
 } finally {
-    // cleanup
+    Console.WriteLine("This always runs");            // Output: This always runs
 }
 
-// Specific exceptions
+// Specific error types
 try {
-    // code
-} catch (ArgumentNullException ex) {
-    // handle
-} catch (InvalidOperationException ex) {
-    // handle
+    var result = 10 / 0;
+} catch (DivideByZeroException ex) {
+    Console.WriteLine("Cannot divide by zero!");
 } catch (Exception ex) {
-    // handle all others
+    Console.WriteLine($"Other error: {ex.Message}");
 }
 
-// Throwing exceptions
-throw new Exception("Something went wrong");
-throw new ArgumentNullException(nameof(parameter));
+// Throwing your own errors
+public int Divide(int a, int b) {
+    if (b == 0) {
+        throw new ArgumentException("Cannot divide by zero!");
+    }
+    return a / b;
+}
+
+try {
+    Console.WriteLine(Divide(10, 2));                 // Output: 5
+    Console.WriteLine(Divide(10, 0));                 // Throws error
+} catch (Exception ex) {
+    Console.WriteLine($"Error: {ex.Message}");        // Output: Error: Cannot divide by zero!
+}
 ```
 
 ---
 
-## LINQ vs Array Methods
+## Array Methods & LINQ
 
-### Map / Select
+**What it does**: Powerful ways to transform, filter, and work with arrays/lists
+
+### Map / Select (Transform Each Item)
+
+**What it does**: Create a new array by transforming each item
 
 ```javascript
 // JavaScript
 const numbers = [1, 2, 3, 4, 5];
-const doubled = numbers.map(x => x * 2);  // [2, 4, 6, 8, 10]
+
+// Double each number
+const doubled = numbers.map(num => num * 2);
+console.log(doubled);                                 // Output: [2, 4, 6, 8, 10]
+
+// Convert to strings
+const strings = numbers.map(num => `Number ${num}`);
+console.log(strings);                                 // Output: ["Number 1", "Number 2", ...]
 ```
 
 ```typescript
 // TypeScript
 const numbers: number[] = [1, 2, 3, 4, 5];
-const doubled: number[] = numbers.map(x => x * 2);
+const doubled: number[] = numbers.map(num => num * 2);
+console.log(doubled);                                 // Output: [2, 4, 6, 8, 10]
 ```
 
 ```csharp
-// C#
+// C# - use Select()
 var numbers = new List<int> {1, 2, 3, 4, 5};
-var doubled = numbers.Select(x => x * 2).ToList();
+
+// Double each number
+var doubled = numbers.Select(num => num * 2).ToList();
+Console.WriteLine(string.Join(", ", doubled));        // Output: 2, 4, 6, 8, 10
+
+// Convert to strings
+var strings = numbers.Select(num => $"Number {num}").ToList();
+Console.WriteLine(string.Join(", ", strings));        // Output: Number 1, Number 2, ...
 ```
 
-### Filter / Where
+### Filter / Where (Keep Only Some Items)
 
-```javascript
-// JavaScript
-const numbers = [1, 2, 3, 4, 5];
-const evens = numbers.filter(x => x % 2 === 0);  // [2, 4]
-```
-
-```typescript
-// TypeScript
-const numbers: number[] = [1, 2, 3, 4, 5];
-const evens: number[] = numbers.filter(x => x % 2 === 0);
-```
-
-```csharp
-// C#
-var numbers = new List<int> {1, 2, 3, 4, 5};
-var evens = numbers.Where(x => x % 2 == 0).ToList();
-```
-
-### Reduce / Aggregate
-
-```javascript
-// JavaScript
-const numbers = [1, 2, 3, 4, 5];
-const sum = numbers.reduce((acc, x) => acc + x, 0);  // 15
-```
-
-```typescript
-// TypeScript
-const numbers: number[] = [1, 2, 3, 4, 5];
-const sum: number = numbers.reduce((acc, x) => acc + x, 0);
-```
-
-```csharp
-// C#
-var numbers = new List<int> {1, 2, 3, 4, 5};
-var sum = numbers.Aggregate(0, (acc, x) => acc + x);
-// Or simpler
-var sum2 = numbers.Sum();
-```
-
-### Find / FirstOrDefault
-
-```javascript
-// JavaScript
-const numbers = [1, 2, 3, 4, 5];
-const found = numbers.find(x => x > 3);  // 4
-const foundIndex = numbers.findIndex(x => x > 3);  // 3
-```
-
-```typescript
-// TypeScript
-const numbers: number[] = [1, 2, 3, 4, 5];
-const found: number | undefined = numbers.find(x => x > 3);
-```
-
-```csharp
-// C#
-var numbers = new List<int> {1, 2, 3, 4, 5};
-var found = numbers.FirstOrDefault(x => x > 3);  // 4
-var foundOrNull = numbers.FirstOrDefault(x => x > 10);  // 0 (default for int)
-```
-
-### Every / All
-
-```javascript
-// JavaScript
-const numbers = [1, 2, 3, 4, 5];
-const allPositive = numbers.every(x => x > 0);  // true
-```
-
-```typescript
-// TypeScript
-const numbers: number[] = [1, 2, 3, 4, 5];
-const allPositive: boolean = numbers.every(x => x > 0);
-```
-
-```csharp
-// C#
-var numbers = new List<int> {1, 2, 3, 4, 5};
-var allPositive = numbers.All(x => x > 0);  // true
-```
-
-### Some / Any
-
-```javascript
-// JavaScript
-const numbers = [1, 2, 3, 4, 5];
-const hasEven = numbers.some(x => x % 2 === 0);  // true
-```
-
-```typescript
-// TypeScript
-const numbers: number[] = [1, 2, 3, 4, 5];
-const hasEven: boolean = numbers.some(x => x % 2 === 0);
-```
-
-```csharp
-// C#
-var numbers = new List<int> {1, 2, 3, 4, 5};
-var hasEven = numbers.Any(x => x % 2 == 0);  // true
-```
-
-### Sort / OrderBy
-
-```javascript
-// JavaScript
-const numbers = [3, 1, 4, 1, 5];
-numbers.sort();  // Mutates: [1, 1, 3, 4, 5]
-numbers.sort((a, b) => b - a);  // Descending: [5, 4, 3, 1, 1]
-
-const sorted = [...numbers].sort();  // Non-mutating
-```
-
-```typescript
-// TypeScript
-const numbers: number[] = [3, 1, 4, 1, 5];
-const sorted: number[] = [...numbers].sort((a, b) => a - b);
-```
-
-```csharp
-// C#
-var numbers = new List<int> {3, 1, 4, 1, 5};
-var sorted = numbers.OrderBy(x => x).ToList();  // [1, 1, 3, 4, 5]
-var sortedDesc = numbers.OrderByDescending(x => x).ToList();
-
-// In-place sort
-numbers.Sort();
-```
-
-### GroupBy
-
-```javascript
-// JavaScript
-const people = [
-  {name: "John", age: 30},
-  {name: "Jane", age: 25},
-  {name: "Bob", age: 30}
-];
-
-const grouped = people.reduce((acc, person) => {
-  (acc[person.age] = acc[person.age] || []).push(person);
-  return acc;
-}, {});
-```
-
-```typescript
-// TypeScript
-interface Person {
-  name: string;
-  age: number;
-}
-
-const people: Person[] = [
-  {name: "John", age: 30},
-  {name: "Jane", age: 25},
-  {name: "Bob", age: 30}
-];
-
-const grouped = people.reduce((acc, person) => {
-  (acc[person.age] = acc[person.age] || []).push(person);
-  return acc;
-}, {} as Record<number, Person[]>);
-```
-
-```csharp
-// C#
-var people = new List<Person> {
-    new Person {Name = "John", Age = 30},
-    new Person {Name = "Jane", Age = 25},
-    new Person {Name = "Bob", Age = 30}
-};
-
-var grouped = people.GroupBy(p => p.Age)
-    .ToDictionary(g => g.Key, g => g.ToList());
-
-// Or as IGrouping
-var grouped2 = people.GroupBy(p => p.Age);
-foreach (var group in grouped2) {
-    Console.WriteLine($"Age {group.Key}: {group.Count()} people");
-}
-```
-
-### Distinct
-
-```javascript
-// JavaScript
-const numbers = [1, 2, 2, 3, 3, 3, 4];
-const unique = [...new Set(numbers)];  // [1, 2, 3, 4]
-```
-
-```typescript
-// TypeScript
-const numbers: number[] = [1, 2, 2, 3, 3, 3, 4];
-const unique: number[] = [...new Set(numbers)];
-```
-
-```csharp
-// C#
-var numbers = new List<int> {1, 2, 2, 3, 3, 3, 4};
-var unique = numbers.Distinct().ToList();  // [1, 2, 3, 4]
-```
-
-### Skip / Take
+**What it does**: Create a new array with only items that match a condition
 
 ```javascript
 // JavaScript
 const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-const skipped = numbers.slice(3);  // [4, 5, 6, 7, 8, 9, 10]
-const taken = numbers.slice(0, 3);  // [1, 2, 3]
-const skipAndTake = numbers.slice(3, 6);  // [4, 5, 6]
+
+// Keep only even numbers
+const evens = numbers.filter(num => num % 2 === 0);
+console.log(evens);                                   // Output: [2, 4, 6, 8, 10]
+
+// Keep only numbers greater than 5
+const bigNumbers = numbers.filter(num => num > 5);
+console.log(bigNumbers);                              // Output: [6, 7, 8, 9, 10]
+
+const people = [
+  { name: "John", age: 30 },
+  { name: "Jane", age: 25 },
+  { name: "Bob", age: 35 }
+];
+
+// Keep only people over 30
+const adults = people.filter(person => person.age >= 30);
+console.log(adults);                                  // Output: [{name: "John", age: 30}, {name: "Bob", age: 35}]
 ```
 
 ```typescript
 // TypeScript
 const numbers: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-const skipped: number[] = numbers.slice(3);
-const taken: number[] = numbers.slice(0, 3);
+const evens: number[] = numbers.filter(num => num % 2 === 0);
+console.log(evens);                                   // Output: [2, 4, 6, 8, 10]
+```
+
+```csharp
+// C# - use Where()
+var numbers = new List<int> {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+// Keep only even numbers
+var evens = numbers.Where(num => num % 2 == 0).ToList();
+Console.WriteLine(string.Join(", ", evens));          // Output: 2, 4, 6, 8, 10
+
+// Keep only numbers greater than 5
+var bigNumbers = numbers.Where(num => num > 5).ToList();
+Console.WriteLine(string.Join(", ", bigNumbers));     // Output: 6, 7, 8, 9, 10
+```
+
+### Reduce / Aggregate (Combine All Items into One Value)
+
+**What it does**: Combine all array items into a single value
+
+```javascript
+// JavaScript
+const numbers = [1, 2, 3, 4, 5];
+
+// Sum all numbers
+const sum = numbers.reduce((total, num) => total + num, 0);
+console.log(sum);                                     // Output: 15 (1+2+3+4+5)
+
+// Find maximum
+const max = numbers.reduce((highest, num) => num > highest ? num : highest);
+console.log(max);                                     // Output: 5
+
+// Combine strings
+const words = ["Hello", "World", "!"];
+const sentence = words.reduce((result, word) => result + " " + word);
+console.log(sentence);                                // Output: " Hello World !"
+```
+
+```typescript
+// TypeScript
+const numbers: number[] = [1, 2, 3, 4, 5];
+const sum: number = numbers.reduce((total, num) => total + num, 0);
+console.log(sum);                                     // Output: 15
+```
+
+```csharp
+// C# - use Aggregate() or built-in methods
+var numbers = new List<int> {1, 2, 3, 4, 5};
+
+// Sum all numbers (easy way)
+var sum = numbers.Sum();
+Console.WriteLine(sum);                               // Output: 15
+
+// Sum with Aggregate
+var sum2 = numbers.Aggregate(0, (total, num) => total + num);
+Console.WriteLine(sum2);                              // Output: 15
+
+// Find maximum (easy way)
+var max = numbers.Max();
+Console.WriteLine(max);                               // Output: 5
+```
+
+### Sort / OrderBy
+
+**What it does**: Sort array items in order
+
+```javascript
+// JavaScript
+const numbers = [5, 2, 8, 1, 9];
+
+// Sort ascending (⚠️ modifies original array!)
+numbers.sort((a, b) => a - b);
+console.log(numbers);                                 // Output: [1, 2, 5, 8, 9]
+
+// Sort descending
+numbers.sort((a, b) => b - a);
+console.log(numbers);                                 // Output: [9, 8, 5, 2, 1]
+
+// Sort without modifying original
+const original = [5, 2, 8, 1, 9];
+const sorted = [...original].sort((a, b) => a - b);
+console.log(original);                                // Output: [5, 2, 8, 1, 9] (unchanged)
+console.log(sorted);                                  // Output: [1, 2, 5, 8, 9]
+
+// Sort objects
+const people = [
+  { name: "John", age: 30 },
+  { name: "Jane", age: 25 },
+  { name: "Bob", age: 35 }
+];
+
+people.sort((a, b) => a.age - b.age);
+console.log(people);                                  // Output: Jane(25), John(30), Bob(35)
+```
+
+```typescript
+// TypeScript
+const numbers: number[] = [5, 2, 8, 1, 9];
+const sorted: number[] = [...numbers].sort((a, b) => a - b);
+console.log(sorted);                                  // Output: [1, 2, 5, 8, 9]
+```
+
+```csharp
+// C# - use OrderBy() (doesn't modify original)
+var numbers = new List<int> {5, 2, 8, 1, 9};
+
+// Sort ascending
+var sorted = numbers.OrderBy(x => x).ToList();
+Console.WriteLine(string.Join(", ", sorted));         // Output: 1, 2, 5, 8, 9
+
+// Sort descending
+var sortedDesc = numbers.OrderByDescending(x => x).ToList();
+Console.WriteLine(string.Join(", ", sortedDesc));     // Output: 9, 8, 5, 2, 1
+
+// Original list unchanged
+Console.WriteLine(string.Join(", ", numbers));        // Output: 5, 2, 8, 1, 9
+
+// Sort objects
+var people = new List<Person> {
+    new Person { Name = "John", Age = 30 },
+    new Person { Name = "Jane", Age = 25 },
+    new Person { Name = "Bob", Age = 35 }
+};
+
+var sortedPeople = people.OrderBy(p => p.Age).ToList();
+// Output: Jane(25), John(30), Bob(35)
+```
+
+### Chaining Multiple Operations
+
+**What it does**: Combine multiple array operations together
+
+```javascript
+// JavaScript
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+// Filter even numbers, double them, then sum
+const result = numbers
+  .filter(num => num % 2 === 0)                       // [2, 4, 6, 8, 10]
+  .map(num => num * 2)                                // [4, 8, 12, 16, 20]
+  .reduce((sum, num) => sum + num, 0);                // 60
+
+console.log(result);                                  // Output: 60
+```
+
+```typescript
+// TypeScript
+const numbers: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const result: number = numbers
+  .filter(num => num % 2 === 0)
+  .map(num => num * 2)
+  .reduce((sum, num) => sum + num, 0);
+
+console.log(result);                                  // Output: 60
 ```
 
 ```csharp
 // C#
 var numbers = new List<int> {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-var skipped = numbers.Skip(3).ToList();
-var taken = numbers.Take(3).ToList();
-var skipAndTake = numbers.Skip(3).Take(3).ToList();
+
+// Filter even numbers, double them, then sum
+var result = numbers
+    .Where(num => num % 2 == 0)                       // [2, 4, 6, 8, 10]
+    .Select(num => num * 2)                           // [4, 8, 12, 16, 20]
+    .Sum();                                           // 60
+
+Console.WriteLine(result);                            // Output: 60
 ```
 
-### Join
+---
+
+## Common Data Structures
+
+### Dictionary / Map / Object (Key-Value Pairs)
+
+**What it does**: Store data as pairs (like a real dictionary: word → definition)
 
 ```javascript
 // JavaScript
-const users = [
-  {id: 1, name: "John"},
-  {id: 2, name: "Jane"}
-];
-const orders = [
-  {userId: 1, product: "Book"},
-  {userId: 2, product: "Pen"}
-];
+// Using Map
+const userAges = new Map();
+userAges.set("John", 30);
+userAges.set("Jane", 25);
+userAges.set("Bob", 35);
 
-const joined = users.map(user => ({
-  ...user,
-  orders: orders.filter(o => o.userId === user.id)
-}));
-```
+console.log(userAges.get("John"));                    // Output: 30
+console.log(userAges.has("Jane"));                    // Output: true
+console.log(userAges.size);                           // Output: 3
 
-```typescript
-// TypeScript
-interface User {
-  id: number;
-  name: string;
-}
-interface Order {
-  userId: number;
-  product: string;
-}
+userAges.delete("Bob");
+console.log(userAges.size);                           // Output: 2
 
-const users: User[] = [
-  {id: 1, name: "John"},
-  {id: 2, name: "Jane"}
-];
-const orders: Order[] = [
-  {userId: 1, product: "Book"},
-  {userId: 2, product: "Pen"}
-];
-
-const joined = users.map(user => ({
-  ...user,
-  orders: orders.filter(o => o.userId === user.id)
-}));
-```
-
-```csharp
-// C#
-var users = new List<User> {
-    new User {Id = 1, Name = "John"},
-    new User {Id = 2, Name = "Jane"}
-};
-var orders = new List<Order> {
-    new Order {UserId = 1, Product = "Book"},
-    new Order {UserId = 2, Product = "Pen"}
+// Using plain object
+const scores = {
+  "John": 95,
+  "Jane": 87,
+  "Bob": 92
 };
 
-var joined = users.Join(
-    orders,
-    user => user.Id,
-    order => order.UserId,
-    (user, order) => new { user.Name, order.Product }
-).ToList();
+console.log(scores["John"]);                          // Output: 95
+console.log(scores.Jane);                             // Output: 87
 
-// Or with group join
-var grouped = users.GroupJoin(
-    orders,
-    user => user.Id,
-    order => order.UserId,
-    (user, userOrders) => new { user.Name, Orders = userOrders.ToList() }
-).ToList();
-```
-
----
-
-## Interfaces & Types
-
-### Interface Definition
-
-```javascript
-// JavaScript (no interfaces, just JSDoc)
-/**
- * @typedef {Object} User
- * @property {string} name
- * @property {number} age
- */
+// Get all keys and values
+console.log(Object.keys(scores));                     // Output: ["John", "Jane", "Bob"]
+console.log(Object.values(scores));                   // Output: [95, 87, 92]
 ```
 
 ```typescript
 // TypeScript
-interface User {
-  name: string;
-  age: number;
-  email?: string;  // Optional
-  readonly id: string;  // Readonly
-}
+const userAges: Map<string, number> = new Map();
+userAges.set("John", 30);
+userAges.set("Jane", 25);
 
-// Type alias
-type UserType = {
-  name: string;
-  age: number;
+console.log(userAges.get("John"));                    // Output: 30
+
+// Using Record type
+const scores: Record<string, number> = {
+  "John": 95,
+  "Jane": 87,
+  "Bob": 92
 };
 
-// Extending
-interface Admin extends User {
-  role: string;
-}
-
-// Implementing
-class UserImpl implements User {
-  name: string;
-  age: number;
-  id: string;
-
-  constructor(name: string, age: number, id: string) {
-    this.name = name;
-    this.age = age;
-    this.id = id;
-  }
-}
+console.log(scores["John"]);                          // Output: 95
 ```
 
 ```csharp
-// C#
-public interface IUser {
-    string Name { get; set; }
-    int Age { get; set; }
-    string Email { get; set; }  // Optional via nullable
-    string Id { get; }  // Readonly (get only)
-}
-
-// Implementing
-public class User : IUser {
-    public string Name { get; set; }
-    public int Age { get; set; }
-    public string? Email { get; set; }
-    public string Id { get; }
-
-    public User(string id) {
-        Id = id;
-    }
-}
-
-// Multiple interfaces
-public class Admin : IUser, IAdmin {
-    // Implementation
-}
-```
-
-### Union & Intersection Types
-
-```typescript
-// TypeScript
-type ID = string | number;  // Union
-type Admin = User & { role: string };  // Intersection
-
-function printId(id: ID) {
-  if (typeof id === "string") {
-    console.log(id.toUpperCase());
-  } else {
-    console.log(id);
-  }
-}
-```
-
-```csharp
-// C# (no direct equivalent, use generics or inheritance)
-// Can use 'object' but loses type safety
-public void PrintId(object id) {
-    if (id is string s) {
-        Console.WriteLine(s.ToUpper());
-    } else if (id is int i) {
-        Console.WriteLine(i);
-    }
-}
-
-// Or use generics with constraints
-public void PrintId<T>(T id) where T : IConvertible {
-    Console.WriteLine(id);
-}
-```
-
----
-
-## Generics
-
-### Generic Functions
-
-```typescript
-// TypeScript
-function identity<T>(value: T): T {
-  return value;
-}
-
-const num = identity<number>(42);
-const str = identity<string>("hello");
-const auto = identity(42);  // Type inference
-```
-
-```csharp
-// C#
-public T Identity<T>(T value) {
-    return value;
-}
-
-var num = Identity<int>(42);
-var str = Identity<string>("hello");
-var auto = Identity(42);  // Type inference
-```
-
-### Generic Classes
-
-```typescript
-// TypeScript
-class Box<T> {
-  private value: T;
-
-  constructor(value: T) {
-    this.value = value;
-  }
-
-  getValue(): T {
-    return this.value;
-  }
-}
-
-const numBox = new Box<number>(42);
-const strBox = new Box<string>("hello");
-```
-
-```csharp
-// C#
-public class Box<T> {
-    private T value;
-
-    public Box(T value) {
-        this.value = value;
-    }
-
-    public T GetValue() {
-        return value;
-    }
-}
-
-var numBox = new Box<int>(42);
-var strBox = new Box<string>("hello");
-```
-
-### Generic Constraints
-
-```typescript
-// TypeScript
-interface HasLength {
-  length: number;
-}
-
-function logLength<T extends HasLength>(item: T): void {
-  console.log(item.length);
-}
-
-logLength("hello");  // OK
-logLength([1, 2, 3]);  // OK
-// logLength(42);  // Error
-```
-
-```csharp
-// C#
-public interface IHasLength {
-    int Length { get; }
-}
-
-public void LogLength<T>(T item) where T : IHasLength {
-    Console.WriteLine(item.Length);
-}
-
-// Common constraints
-public void Example<T>() where T : class { }  // Reference type
-public void Example<T>() where T : struct { }  // Value type
-public void Example<T>() where T : new() { }  // Has parameterless constructor
-public void Example<T>() where T : BaseClass { }  // Inherits from BaseClass
-public void Example<T>() where T : IInterface { }  // Implements interface
-```
-
----
-
-## Destructuring
-
-### Array Destructuring
-
-```javascript
-// JavaScript
-const arr = [1, 2, 3, 4, 5];
-const [first, second] = arr;
-const [a, , c] = arr;  // Skip elements
-const [head, ...tail] = arr;  // Rest
-```
-
-```typescript
-// TypeScript
-const arr: number[] = [1, 2, 3, 4, 5];
-const [first, second]: number[] = arr;
-const [a, , c]: number[] = arr;
-const [head, ...tail]: number[] = arr;
-```
-
-```csharp
-// C# (Deconstruction)
-var arr = new[] {1, 2, 3, 4, 5};
-var (first, second) = (arr[0], arr[1]);
-
-// Tuple deconstruction
-var (a, b, c) = (1, 2, 3);
-
-// Custom deconstruction
-public class Point {
-    public int X { get; set; }
-    public int Y { get; set; }
-
-    public void Deconstruct(out int x, out int y) {
-        x = X;
-        y = Y;
-    }
-}
-
-var point = new Point { X = 10, Y = 20 };
-var (x, y) = point;
-```
-
-### Object Destructuring
-
-```javascript
-// JavaScript
-const user = {name: "John", age: 30, email: "john@example.com"};
-const {name, age} = user;
-const {name: userName, age: userAge} = user;  // Rename
-const {name, ...rest} = user;  // Rest
-const {address = "Unknown"} = user;  // Default
-```
-
-```typescript
-// TypeScript
-interface User {
-  name: string;
-  age: number;
-  email: string;
-}
-
-const user: User = {name: "John", age: 30, email: "john@example.com"};
-const {name, age}: {name: string, age: number} = user;
-const {name: userName, age: userAge} = user;
-const {name, ...rest} = user;
-```
-
-```csharp
-// C# (limited support)
-// Named tuples
-var user = (Name: "John", Age: 30, Email: "john@example.com");
-var (name, age, email) = user;
-var (userName, _, _) = user;  // Discard
-
-// With records (C# 9+)
-public record User(string Name, int Age, string Email);
-var user = new User("John", 30, "john@example.com");
-var (name, age, email) = user;
-```
-
----
-
-## Spread/Rest Operators
-
-### Spread
-
-```javascript
-// JavaScript
-const arr1 = [1, 2, 3];
-const arr2 = [4, 5, 6];
-const combined = [...arr1, ...arr2];
-
-const obj1 = {a: 1, b: 2};
-const obj2 = {c: 3, d: 4};
-const merged = {...obj1, ...obj2};
-
-// Function arguments
-Math.max(...arr1);
-```
-
-```typescript
-// TypeScript
-const arr1: number[] = [1, 2, 3];
-const arr2: number[] = [4, 5, 6];
-const combined: number[] = [...arr1, ...arr2];
-
-const obj1: {a: number, b: number} = {a: 1, b: 2};
-const obj2: {c: number, d: number} = {c: 3, d: 4};
-const merged = {...obj1, ...obj2};
-```
-
-```csharp
-// C# (no direct equivalent)
-var arr1 = new[] {1, 2, 3};
-var arr2 = new[] {4, 5, 6};
-var combined = arr1.Concat(arr2).ToArray();
-
-// For objects, manual copy or use libraries
-var obj1 = new {a = 1, b = 2};
-var obj2 = new {c = 3, d = 4};
-// No built-in spread for objects
-```
-
-### Rest
-
-```javascript
-// JavaScript
-function sum(...numbers) {
-  return numbers.reduce((a, b) => a + b, 0);
-}
-sum(1, 2, 3, 4);
-```
-
-```typescript
-// TypeScript
-function sum(...numbers: number[]): number {
-  return numbers.reduce((a, b) => a + b, 0);
-}
-```
-
-```csharp
-// C#
-public int Sum(params int[] numbers) {
-    return numbers.Sum();
-}
-Sum(1, 2, 3, 4);
-```
-
----
-
-## Arrow Functions & Lambdas
-
-### Arrow Functions
-
-```javascript
-// JavaScript
-const add = (a, b) => a + b;
-const square = x => x * x;
-const greet = () => "Hello";
-const complex = (a, b) => {
-  const result = a + b;
-  return result;
-};
-```
-
-```typescript
-// TypeScript
-const add = (a: number, b: number): number => a + b;
-const square = (x: number): number => x * x;
-const greet = (): string => "Hello";
-```
-
-```csharp
-// C#
-Func<int, int, int> add = (a, b) => a + b;
-Func<int, int> square = x => x * x;
-Func<string> greet = () => "Hello";
-Func<int, int, int> complex = (a, b) => {
-    var result = a + b;
-    return result;
+// C# - Dictionary
+var userAges = new Dictionary<string, int>();
+userAges["John"] = 30;
+userAges["Jane"] = 25;
+userAges["Bob"] = 35;
+
+// Or initialize directly
+var userAges2 = new Dictionary<string, int> {
+    {"John", 30},
+    {"Jane", 25},
+    {"Bob", 35}
 };
 
-// Or use local functions
-int Add(int a, int b) => a + b;
-```
+Console.WriteLine(userAges["John"]);                  // Output: 30
+Console.WriteLine(userAges.ContainsKey("Jane"));      // Output: True
+Console.WriteLine(userAges.Count);                    // Output: 3
 
-### Higher-order Functions
+userAges.Remove("Bob");
+Console.WriteLine(userAges.Count);                    // Output: 2
 
-```javascript
-// JavaScript
-const multiplyBy = (factor) => (number) => number * factor;
-const double = multiplyBy(2);
-double(5);  // 10
-```
+// Get all keys and values
+Console.WriteLine(string.Join(", ", userAges.Keys));  // Output: John, Jane
+Console.WriteLine(string.Join(", ", userAges.Values)); // Output: 30, 25
 
-```typescript
-// TypeScript
-const multiplyBy = (factor: number) => (number: number): number => number * factor;
-const double = multiplyBy(2);
-double(5);  // 10
-```
-
-```csharp
-// C#
-Func<int, Func<int, int>> MultiplyBy = factor => number => number * factor;
-var double = MultiplyBy(2);
-double(5);  // 10
-```
-
----
-
-## Date & Time
-
-### Creating Dates
-
-```javascript
-// JavaScript
-const now = new Date();
-const specific = new Date(2024, 0, 15);  // Month is 0-indexed
-const fromString = new Date("2024-01-15");
-const fromTimestamp = new Date(1705276800000);
-```
-
-```typescript
-// TypeScript
-const now: Date = new Date();
-const specific: Date = new Date(2024, 0, 15);
-const fromString: Date = new Date("2024-01-15");
-```
-
-```csharp
-// C#
-var now = DateTime.Now;
-var utcNow = DateTime.UtcNow;
-var specific = new DateTime(2024, 1, 15);  // Month is 1-indexed
-var fromString = DateTime.Parse("2024-01-15");
-var fromStringExact = DateTime.ParseExact("2024-01-15", "yyyy-MM-dd", null);
-```
-
-### Date Operations
-
-```javascript
-// JavaScript
-const date = new Date();
-date.getFullYear();
-date.getMonth();  // 0-11
-date.getDate();   // 1-31
-date.getHours();
-date.getMinutes();
-date.getSeconds();
-
-date.setFullYear(2025);
-date.setMonth(11);
-date.setDate(25);
-
-const timestamp = date.getTime();
-const isoString = date.toISOString();
-const dateString = date.toDateString();
-```
-
-```typescript
-// TypeScript
-const date: Date = new Date();
-const year: number = date.getFullYear();
-const month: number = date.getMonth();
-```
-
-```csharp
-// C#
-var date = DateTime.Now;
-date.Year;
-date.Month;  // 1-12
-date.Day;    // 1-31
-date.Hour;
-date.Minute;
-date.Second;
-
-var modified = date.AddYears(1);
-modified = date.AddMonths(1);
-modified = date.AddDays(1);
-
-var timestamp = new DateTimeOffset(date).ToUnixTimeMilliseconds();
-var isoString = date.ToString("o");
-var dateString = date.ToString("yyyy-MM-dd");
-```
-
-### Date Comparison
-
-```javascript
-// JavaScript
-const date1 = new Date("2024-01-15");
-const date2 = new Date("2024-01-20");
-
-date1 < date2;   // true
-date1 > date2;   // false
-date1.getTime() === date2.getTime();
-```
-
-```typescript
-// TypeScript
-const date1: Date = new Date("2024-01-15");
-const date2: Date = new Date("2024-01-20");
-const isEqual: boolean = date1.getTime() === date2.getTime();
-```
-
-```csharp
-// C#
-var date1 = new DateTime(2024, 1, 15);
-var date2 = new DateTime(2024, 1, 20);
-
-date1 < date2;   // true
-date1 > date2;   // false
-date1 == date2;  // false
-
-// Compare
-DateTime.Compare(date1, date2);  // -1, 0, or 1
-```
-
----
-
-## JSON Operations
-
-### JSON Stringify/Parse
-
-```javascript
-// JavaScript
-const obj = {name: "John", age: 30};
-const json = JSON.stringify(obj);
-const parsed = JSON.parse(json);
-
-// Pretty print
-const pretty = JSON.stringify(obj, null, 2);
-```
-
-```typescript
-// TypeScript
-interface User {
-  name: string;
-  age: number;
+// Loop through dictionary
+foreach (var kvp in userAges) {
+    Console.WriteLine($"{kvp.Key}: {kvp.Value}");     // Output: John: 30, Jane: 25
 }
-
-const obj: User = {name: "John", age: 30};
-const json: string = JSON.stringify(obj);
-const parsed: User = JSON.parse(json);
 ```
 
-```csharp
-// C# (using System.Text.Json)
-using System.Text.Json;
+### Set (Unique Values Only)
 
-var obj = new {Name = "John", Age = 30};
-var json = JsonSerializer.Serialize(obj);
-var parsed = JsonSerializer.Deserialize<User>(json);
-
-// Pretty print
-var options = new JsonSerializerOptions { WriteIndented = true };
-var pretty = JsonSerializer.Serialize(obj, options);
-
-// Or with Newtonsoft.Json
-using Newtonsoft.Json;
-var json2 = JsonConvert.SerializeObject(obj);
-var parsed2 = JsonConvert.DeserializeObject<User>(json);
-```
-
----
-
-## File Operations
-
-### Reading Files
-
-```javascript
-// JavaScript (Node.js)
-const fs = require('fs');
-
-// Sync
-const content = fs.readFileSync('file.txt', 'utf8');
-
-// Async (callback)
-fs.readFile('file.txt', 'utf8', (err, data) => {
-  if (err) throw err;
-  console.log(data);
-});
-
-// Async (Promise)
-const fsPromises = require('fs').promises;
-const content = await fsPromises.readFile('file.txt', 'utf8');
-```
-
-```typescript
-// TypeScript (Node.js)
-import * as fs from 'fs';
-import { promises as fsPromises } from 'fs';
-
-const content: string = fs.readFileSync('file.txt', 'utf8');
-
-const contentAsync: string = await fsPromises.readFile('file.txt', 'utf8');
-```
-
-```csharp
-// C#
-using System.IO;
-
-// Sync
-var content = File.ReadAllText("file.txt");
-var lines = File.ReadAllLines("file.txt");
-var bytes = File.ReadAllBytes("file.txt");
-
-// Async
-var contentAsync = await File.ReadAllTextAsync("file.txt");
-var linesAsync = await File.ReadAllLinesAsync("file.txt");
-```
-
-### Writing Files
-
-```javascript
-// JavaScript (Node.js)
-const fs = require('fs');
-
-// Sync
-fs.writeFileSync('file.txt', 'Hello World');
-
-// Async
-const fsPromises = require('fs').promises;
-await fsPromises.writeFile('file.txt', 'Hello World');
-
-// Append
-fs.appendFileSync('file.txt', 'More content');
-```
-
-```typescript
-// TypeScript
-import { promises as fsPromises } from 'fs';
-
-await fsPromises.writeFile('file.txt', 'Hello World');
-await fsPromises.appendFile('file.txt', 'More content');
-```
-
-```csharp
-// C#
-// Sync
-File.WriteAllText("file.txt", "Hello World");
-File.WriteAllLines("file.txt", new[] {"Line 1", "Line 2"});
-
-// Async
-await File.WriteAllTextAsync("file.txt", "Hello World");
-await File.WriteAllLinesAsync("file.txt", new[] {"Line 1", "Line 2"});
-
-// Append
-File.AppendAllText("file.txt", "More content");
-await File.AppendAllTextAsync("file.txt", "More content");
-```
-
-### File System Operations
-
-```javascript
-// JavaScript (Node.js)
-const fs = require('fs');
-
-// Check existence
-fs.existsSync('file.txt');
-
-// Delete
-fs.unlinkSync('file.txt');
-
-// Directory operations
-fs.mkdirSync('mydir');
-fs.rmdirSync('mydir');
-fs.readdirSync('mydir');
-```
-
-```typescript
-// TypeScript
-import * as fs from 'fs';
-
-const exists: boolean = fs.existsSync('file.txt');
-fs.unlinkSync('file.txt');
-fs.mkdirSync('mydir');
-const files: string[] = fs.readdirSync('mydir');
-```
-
-```csharp
-// C#
-// Check existence
-File.Exists("file.txt");
-Directory.Exists("mydir");
-
-// Delete
-File.Delete("file.txt");
-
-// Directory operations
-Directory.CreateDirectory("mydir");
-Directory.Delete("mydir");
-var files = Directory.GetFiles("mydir");
-var dirs = Directory.GetDirectories("mydir");
-```
-
----
-
-## Additional Quick References
-
-### Dictionary/Map/Object
+**What it does**: Store unique values (automatically removes duplicates)
 
 ```javascript
 // JavaScript
-const map = new Map();
-map.set('key', 'value');
-map.get('key');
-map.has('key');
-map.delete('key');
-map.size;
+const numbers = new Set([1, 2, 3, 3, 4, 4, 5]);
+console.log(numbers);                                 // Output: Set {1, 2, 3, 4, 5} (duplicates removed!)
 
-// Object as map
-const obj = {};
-obj['key'] = 'value';
-obj.key = 'value';
-delete obj.key;
-Object.keys(obj);
-Object.values(obj);
-Object.entries(obj);
+numbers.add(6);
+numbers.add(3);                                       // Already exists, won't add again
+console.log(numbers);                                 // Output: Set {1, 2, 3, 4, 5, 6}
+
+console.log(numbers.has(3));                          // Output: true
+console.log(numbers.has(10));                         // Output: false
+console.log(numbers.size);                            // Output: 6
+
+numbers.delete(3);
+console.log(numbers.has(3));                          // Output: false
+
+// Convert Set to Array
+const uniqueArray = [...numbers];
+console.log(uniqueArray);                             // Output: [1, 2, 4, 5, 6]
+
+// Remove duplicates from array
+const withDuplicates = [1, 2, 2, 3, 3, 3, 4];
+const unique = [...new Set(withDuplicates)];
+console.log(unique);                                  // Output: [1, 2, 3, 4]
 ```
 
 ```typescript
 // TypeScript
-const map: Map<string, string> = new Map();
-map.set('key', 'value');
-const value: string | undefined = map.get('key');
+const numbers: Set<number> = new Set([1, 2, 3, 3, 4, 4, 5]);
+console.log(numbers);                                 // Output: Set {1, 2, 3, 4, 5}
 
-// Record type
-const obj: Record<string, string> = {};
-obj['key'] = 'value';
+numbers.add(6);
+console.log(numbers.has(3));                          // Output: true
+console.log(numbers.size);                            // Output: 6
 ```
 
 ```csharp
-// C#
-var dict = new Dictionary<string, string>();
-dict["key"] = "value";
-dict.Add("key2", "value2");
-var value = dict["key"];
-dict.ContainsKey("key");
-dict.Remove("key");
-dict.Count;
+// C# - HashSet
+var numbers = new HashSet<int> {1, 2, 3, 3, 4, 4, 5};
+Console.WriteLine(string.Join(", ", numbers));        // Output: 1, 2, 3, 4, 5 (duplicates removed!)
 
-// Iteration
-foreach (var kvp in dict) {
-    Console.WriteLine($"{kvp.Key}: {kvp.Value}");
-}
+numbers.Add(6);
+numbers.Add(3);                                       // Already exists, won't add
+Console.WriteLine(string.Join(", ", numbers));        // Output: 1, 2, 3, 4, 5, 6
 
-dict.Keys;
-dict.Values;
-```
+Console.WriteLine(numbers.Contains(3));               // Output: True
+Console.WriteLine(numbers.Contains(10));              // Output: False
+Console.WriteLine(numbers.Count);                     // Output: 6
 
-### Set
-
-```javascript
-// JavaScript
-const set = new Set([1, 2, 3]);
-set.add(4);
-set.has(2);
-set.delete(2);
-set.size;
-set.clear();
+numbers.Remove(3);
+Console.WriteLine(numbers.Contains(3));               // Output: False
 
 // Convert to array
-const arr = [...set];
-```
+var uniqueArray = numbers.ToArray();
+Console.WriteLine(string.Join(", ", uniqueArray));    // Output: 1, 2, 4, 5, 6
 
-```typescript
-// TypeScript
-const set: Set<number> = new Set([1, 2, 3]);
-set.add(4);
-const has: boolean = set.has(2);
-```
-
-```csharp
-// C#
-var set = new HashSet<int> {1, 2, 3};
-set.Add(4);
-set.Contains(2);
-set.Remove(2);
-set.Count;
-set.Clear();
-
-// Convert to array
-var arr = set.ToArray();
-```
-
-### Regular Expressions
-
-```javascript
-// JavaScript
-const regex = /pattern/gi;
-const regex2 = new RegExp('pattern', 'gi');
-
-'hello'.match(/l+/g);
-'hello'.replace(/l/g, 'L');
-/hello/.test('hello world');
-regex.exec('hello');
-```
-
-```typescript
-// TypeScript
-const regex: RegExp = /pattern/gi;
-const matches: RegExpMatchArray | null = 'hello'.match(/l+/g);
-```
-
-```csharp
-// C#
-using System.Text.RegularExpressions;
-
-var regex = new Regex(@"pattern", RegexOptions.IgnoreCase);
-var matches = regex.Matches("hello");
-var isMatch = regex.IsMatch("hello");
-var replaced = regex.Replace("hello", "HELLO");
-
-// Static methods
-Regex.IsMatch("hello", @"pattern");
-Regex.Replace("hello", @"l", "L");
-```
-
-### Math Operations
-
-```javascript
-// JavaScript
-Math.abs(-5);
-Math.ceil(4.3);
-Math.floor(4.7);
-Math.round(4.5);
-Math.max(1, 2, 3);
-Math.min(1, 2, 3);
-Math.pow(2, 3);
-Math.sqrt(16);
-Math.random();  // 0 to 1
-Math.PI;
-Math.E;
-```
-
-```typescript
-// TypeScript
-const abs: number = Math.abs(-5);
-const max: number = Math.max(1, 2, 3);
-```
-
-```csharp
-// C#
-Math.Abs(-5);
-Math.Ceiling(4.3);
-Math.Floor(4.7);
-Math.Round(4.5);
-Math.Max(1, 2);
-Math.Min(1, 2);
-Math.Pow(2, 3);
-Math.Sqrt(16);
-new Random().NextDouble();  // 0 to 1
-Math.PI;
-Math.E;
+// Remove duplicates from list
+var withDuplicates = new List<int> {1, 2, 2, 3, 3, 3, 4};
+var unique = withDuplicates.Distinct().ToList();
+Console.WriteLine(string.Join(", ", unique));         // Output: 1, 2, 3, 4
 ```
 
 ---
 
-## Common Patterns & Best Practices
+## Quick Comparison Tables
 
-### Null Safety
+### How to Print
 
-```javascript
-// JavaScript
-const value = obj?.property ?? "default";
-const result = arr?.[0];
-```
+| Task | JavaScript | TypeScript | C# |
+|------|------------|------------|-----|
+| Print text | `console.log("Hello")` | `console.log("Hello")` | `Console.WriteLine("Hello")` |
+| Print variable | `console.log(name)` | `console.log(name)` | `Console.WriteLine(name)` |
+| Print with variable | `` console.log(`Hi ${name}`) `` | `` console.log(`Hi ${name}`) `` | `Console.WriteLine($"Hi {name}")` |
 
-```typescript
-// TypeScript
-const value: string = obj?.property ?? "default";
-const result: number | undefined = arr?.[0];
+### How to Create Arrays
 
-// Non-null assertion (use carefully)
-const length: number = str!.length;
-```
+| Task | JavaScript | TypeScript | C# |
+|------|------------|------------|-----|
+| Array of numbers | `[1, 2, 3]` | `const arr: number[] = [1, 2, 3]` | `new List<int> {1, 2, 3}` |
+| Array of strings | `["a", "b"]` | `const arr: string[] = ["a", "b"]` | `new List<string> {"a", "b"}` |
+| Add to array | `arr.push(4)` | `arr.push(4)` | `arr.Add(4)` |
+| Remove from array | `arr.pop()` | `arr.pop()` | `arr.RemoveAt(arr.Count - 1)` |
+| Array length | `arr.length` | `arr.length` | `arr.Count` |
 
-```csharp
-// C#
-var value = obj?.Property ?? "default";
-var result = arr?[0];
+### How to Loop
 
-// Null-forgiving operator
-var length = str!.Length;
-```
-
-### Immutability
-
-```javascript
-// JavaScript
-const arr = [1, 2, 3];
-const newArr = [...arr, 4];  // Don't mutate original
-
-const obj = {a: 1};
-const newObj = {...obj, b: 2};
-```
-
-```typescript
-// TypeScript
-const arr: readonly number[] = [1, 2, 3];
-// arr.push(4);  // Error
-
-interface User {
-  readonly id: string;
-  name: string;
-}
-```
-
-```csharp
-// C#
-var arr = new[] {1, 2, 3}.ToImmutableList();
-var newArr = arr.Add(4);
-
-// Readonly collection
-IReadOnlyList<int> readonlyList = new List<int> {1, 2, 3};
-
-// Init-only properties
-public string Id { get; init; }
-```
+| Task | JavaScript | TypeScript | C# |
+|------|------------|------------|-----|
+| For loop | `for (let i = 0; i < 10; i++)` | `for (let i = 0; i < 10; i++)` | `for (int i = 0; i < 10; i++)` |
+| For each | `for (const item of arr)` | `for (const item of arr)` | `foreach (var item in arr)` |
+| While loop | `while (condition)` | `while (condition)` | `while (condition)` |
 
 ---
 
-This cheat sheet covers the most common syntax patterns you'll encounter when switching between JavaScript, TypeScript, and C#. Bookmark it for quick reference!
+## Tips & Common Mistakes
+
+### JavaScript/TypeScript Tips
+
+✅ **DO**: Use `const` for values that don't change, `let` for variables
+❌ **DON'T**: Use `var` (old way, causes bugs)
+
+✅ **DO**: Use template literals for strings: `` `Hello ${name}` ``
+❌ **DON'T**: Concatenate with +: `"Hello " + name` (harder to read)
+
+✅ **DO**: Use `===` for comparison (checks type too)
+❌ **DON'T**: Use `==` (can cause unexpected results)
+
+### C# Tips
+
+✅ **DO**: Use `var` when the type is obvious: `var name = "John"`
+❌ **DON'T**: Overuse `var` when it makes code unclear
+
+✅ **DO**: Remember C# is case-sensitive: `.Length` not `.length`
+❌ **DON'T**: Forget semicolons - C# requires them!
+
+✅ **DO**: Use LINQ methods like `.Where()`, `.Select()` for lists
+❌ **DON'T**: Write manual loops when LINQ can do it cleaner
+
+---
+
+## 🎯 Most Common Operations Quick Reference
+
+### Print something
+- JS/TS: `console.log("text")`
+- C#: `Console.WriteLine("text")`
+
+### Create a list of numbers
+- JS/TS: `const numbers = [1, 2, 3]`
+- C#: `var numbers = new List<int> {1, 2, 3}`
+
+### Loop through a list
+- JS/TS: `for (const item of list) { }`
+- C#: `foreach (var item in list) { }`
+
+### Filter a list
+- JS/TS: `list.filter(x => x > 5)`
+- C#: `list.Where(x => x > 5).ToList()`
+
+### Transform each item
+- JS/TS: `list.map(x => x * 2)`
+- C#: `list.Select(x => x * 2).ToList()`
+
+### Check if value is null
+- JS/TS: `value ?? "default"`
+- C#: `value ?? "default"`
+
+### String interpolation
+- JS/TS: `` `Hello ${name}` ``
+- C#: `$"Hello {name}"`
+
+---
+
+**Remember**: The best way to learn is by practicing! Try writing small programs using these examples. When you forget syntax, come back to this cheat sheet! 🚀
