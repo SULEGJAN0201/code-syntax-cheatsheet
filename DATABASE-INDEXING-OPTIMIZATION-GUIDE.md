@@ -14,17 +14,21 @@
 5. [Identifying Slow Queries](#-identifying-slow-queries)
 6. [Execution Plan Mastery](#-execution-plan-mastery)
 7. [Query Optimization Techniques](#-query-optimization-techniques)
-8. [Transaction Management & Locking](#-transaction-management--locking)
-9. [Query Plan Cache Management](#-query-plan-cache-management)
-10. [Index Design Methodology](#-index-design-methodology)
-11. [Advanced Optimization Methods](#-advanced-optimization-methods)
-12. [Azure SQL Optimizations](#%EF%B8%8F-azure-sql-optimizations)
-13. [Troubleshooting Playbooks](#-troubleshooting-playbooks)
-14. [Real-World Scenarios](#-real-world-scenarios)
-15. [Error Message Decoder](#-error-message-decoder)
-16. [Quick Wins Checklist](#-quick-wins-checklist)
-17. [Best Practices](#-best-practices)
-18. [Performance Metrics](#-performance-metrics)
+8. [Common Performance Anti-Patterns](#%EF%B8%8F-common-performance-anti-patterns)
+9. [Data Types & Performance Impact](#-data-types--performance-impact)
+10. [Temp Tables vs Table Variables vs CTEs](#-temp-tables-vs-table-variables-vs-ctes)
+11. [Transaction Management & Locking](#-transaction-management--locking)
+12. [Query Plan Cache Management](#-query-plan-cache-management)
+13. [Index Design Methodology](#-index-design-methodology)
+14. [Advanced Optimization Methods](#-advanced-optimization-methods)
+15. [Azure SQL Optimizations](#%EF%B8%8F-azure-sql-optimizations)
+16. [Troubleshooting Playbooks](#-troubleshooting-playbooks)
+17. [Real-World Scenarios](#-real-world-scenarios)
+18. [Quick Reference Cards](#-quick-reference-cards)
+19. [Error Message Decoder](#-error-message-decoder)
+20. [Quick Wins Checklist](#-quick-wins-checklist)
+21. [Best Practices](#-best-practices)
+22. [Performance Metrics](#-performance-metrics)
 
 ---
 
@@ -2144,7 +2148,7 @@ SELECT COUNT(*) FROM @Orders WHERE Amount > 100;  -- Bad plan
 WITH OrdersCTE AS (
     SELECT OrderID, CustomerID, TotalAmount AS Amount
     FROM Orders
-    WHERE OrderDate = '2024-15'
+    WHERE OrderDate = '2024-01-15'
 )
 SELECT COUNT(*) FROM OrdersCTE WHERE Amount > 100;
 -- Time: 380ms (BEST ✅ - no temp storage needed)
