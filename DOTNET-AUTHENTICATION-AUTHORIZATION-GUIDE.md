@@ -1153,20 +1153,1628 @@ SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_...  ← SIGNATURE (verification)
 
 ### 🟡 Intermediate: Complete JWT Implementation
 
-I'll continue with the complete JWT implementation, Cookie Authentication, ASP.NET Core Identity, and all remaining sections. This is getting comprehensive!
+**What you'll build:** Production-ready JWT with refresh tokens, proper validation, and security.
 
-**Should I continue adding:**
-- Complete JWT implementation with refresh tokens
-- Cookie authentication
-- ASP.NET Core Identity setup
-- OAuth 2.0 & external providers
-- All authorization types (RBAC, Claims, Policies, Resource-based)
-- Security best practices
-- Real-world scenarios
-- Troubleshooting guide
+#### Step 1: Install Packages
 
-**The file is getting large. Would you like me to:**
-1. **Continue in the same file** (complete guide, ~3000+ lines)
-2. **Split into multiple files** (Part 1: Auth, Part 2: Authorization, Part 3: Advanced)
+```bash
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+dotnet add package System.IdentityModel.Tokens.Jwt
+```
 
-Which approach do you prefer?
+#### Step 2: JWT Settings (appsettings.json)
+
+```json
+{
+  "Jwt": {
+    "Key": "YourSuperSecretKeyMinimum32CharactersLong!",
+    "Issuer": "https://yourdomain.com",
+    "Audience": "https://yourdomain.com",
+    "AccessTokenExpiryMinutes": 15,
+    "RefreshTokenExpiryDays": 7
+  }
+}
+```
+
+**⚠️ Production:** Store Key in Azure Key Vault or AWS Secrets Manager, NOT in appsettings.json!
+
+#### Step 3: JWT Service
+
+```csharp
+public interface IJwtService
+{
+    string GenerateAccessToken(string userId, string email, IEnumerable<string> roles);
+    string GenerateRefreshToken();
+    ClaimsPrincipal? ValidateToken(string token);
+}
+
+public class JwtService : IJwtService
+{
+    private readonly IConfiguration _config;
+
+    public JwtService(IConfiguration config)
+    {
+        _config = config;
+    }
+
+    public string GenerateAccessToken(string userId, string email, IEnumerable<string> roles)
+    {
+        var key = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, userId),
+            new(JwtRegisteredClaimNames.Email, email),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+        var token = new JwtSecurityToken(
+            issuer: _config["Jwt:Issuer"],
+            audience: _config["Jwt:Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(
+                int.Parse(_config["Jwt:AccessTokenExpiryMinutes"]!)),
+            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public string GenerateRefreshToken()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    }
+
+    public ClaimsPrincipal? ValidateToken(string token)
+    {
+        try
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]!);
+
+            var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = true,
+                ValidIssuer = _config["Jwt:Issuer"],
+                ValidateAudience = true,
+                ValidAudience = _config["Jwt:Audience"],
+                ValidateLifetime = false, // For refresh token validation
+                ClockSkew = TimeSpan.Zero
+            }, out _);
+
+            return principal;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}
+```
+
+#### Step 4: Configure in Program.cs
+
+```csharp
+// Program.cs
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<IJwtService, JwtService>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero // No tolerance for expiry
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+app.Run();
+```
+
+#### Step 5: Auth Controller with Refresh Tokens
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly IJwtService _jwtService;
+    // In production, use database to store refresh tokens
+    private static readonly Dictionary<string, RefreshTokenData> _refreshTokens = new();
+
+    public AuthController(IJwtService jwtService)
+    {
+        _jwtService = jwtService;
+    }
+
+    [HttpPost("login")]
+    public IActionResult Login([FromBody] LoginRequest request)
+    {
+        // TODO: Validate credentials against database
+        if (request.Email != "admin@test.com" || request.Password != "Admin123!")
+        {
+            return Unauthorized(new { message = "Invalid credentials" });
+        }
+
+        var userId = "123";
+        var roles = new[] { "Admin", "User" };
+
+        var accessToken = _jwtService.GenerateAccessToken(userId, request.Email, roles);
+        var refreshToken = _jwtService.GenerateRefreshToken();
+
+        // Store refresh token (in production: use database)
+        _refreshTokens[refreshToken] = new RefreshTokenData
+        {
+            UserId = userId,
+            ExpiresAt = DateTime.UtcNow.AddDays(7)
+        };
+
+        return Ok(new
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            ExpiresIn = 900 // 15 minutes in seconds
+        });
+    }
+
+    [HttpPost("refresh")]
+    public IActionResult Refresh([FromBody] RefreshRequest request)
+    {
+        // Validate refresh token
+        if (!_refreshTokens.TryGetValue(request.RefreshToken, out var tokenData))
+        {
+            return Unauthorized(new { message = "Invalid refresh token" });
+        }
+
+        if (tokenData.ExpiresAt < DateTime.UtcNow)
+        {
+            _refreshTokens.Remove(request.RefreshToken);
+            return Unauthorized(new { message = "Refresh token expired" });
+        }
+
+        // TODO: Get user from database
+        var email = "admin@test.com";
+        var roles = new[] { "Admin", "User" };
+
+        // Generate new tokens
+        var newAccessToken = _jwtService.GenerateAccessToken(
+            tokenData.UserId, email, roles);
+        var newRefreshToken = _jwtService.GenerateRefreshToken();
+
+        // Revoke old refresh token, store new one
+        _refreshTokens.Remove(request.RefreshToken);
+        _refreshTokens[newRefreshToken] = new RefreshTokenData
+        {
+            UserId = tokenData.UserId,
+            ExpiresAt = DateTime.UtcNow.AddDays(7)
+        };
+
+        return Ok(new
+        {
+            AccessToken = newAccessToken,
+            RefreshToken = newRefreshToken,
+            ExpiresIn = 900
+        });
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public IActionResult Logout([FromBody] LogoutRequest request)
+    {
+        // Revoke refresh token
+        _refreshTokens.Remove(request.RefreshToken);
+        return Ok(new { message = "Logged out successfully" });
+    }
+}
+
+record LoginRequest(string Email, string Password);
+record RefreshRequest(string RefreshToken);
+record LogoutRequest(string RefreshToken);
+
+class RefreshTokenData
+{
+    public string UserId { get; set; } = string.Empty;
+    public DateTime ExpiresAt { get; set; }
+}
+```
+
+**Key Points:**
+- Access token: 15 minutes (short-lived, can't be revoked)
+- Refresh token: 7 days (long-lived, stored in DB, can be revoked)
+- On token expiry: Use refresh token to get new access token
+- On logout: Revoke refresh token immediately
+
+---
+
+## 🍪 Cookie Authentication
+
+### 🟢 When to Use Cookies
+
+**Use cookies for:**
+- Traditional web apps (MVC, Razor Pages)
+- Same-domain applications
+- Browser-based sessions
+
+**Don't use cookies for:**
+- Mobile apps
+- Cross-domain APIs
+- Microservices
+
+### 🟡 Cookie Setup
+
+```csharp
+// Program.cs
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "MyApp.Auth";
+        options.Cookie.HttpOnly = true;  // Prevent JavaScript access (XSS protection)
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS only
+        options.Cookie.SameSite = SameSiteMode.Strict; // CSRF protection
+
+        options.ExpireTimeSpan = TimeSpan.FromHours(1);
+        options.SlidingExpiration = true; // Renew cookie if >50% expired
+
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+    });
+```
+
+### Login/Logout
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class AccountController : ControllerBase
+{
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        // TODO: Validate credentials
+        if (request.Email != "user@test.com" || request.Password != "Pass123!")
+        {
+            return Unauthorized();
+        }
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, "123"),
+            new(ClaimTypes.Email, request.Email),
+            new(ClaimTypes.Role, "User")
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            principal,
+            new AuthenticationProperties
+            {
+                IsPersistent = request.RememberMe,
+                ExpiresUtc = request.RememberMe
+                    ? DateTimeOffset.UtcNow.AddDays(30)
+                    : DateTimeOffset.UtcNow.AddHours(1)
+            });
+
+        return Ok(new { message = "Logged in" });
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return Ok(new { message = "Logged out" });
+    }
+}
+
+record LoginRequest(string Email, string Password, bool RememberMe);
+```
+
+---
+
+## 👤 ASP.NET Core Identity
+
+### 🟢 What is Identity?
+
+**Identity = Complete user management system**
+- User registration
+- Password hashing
+- Email confirmation
+- Password reset
+- Two-factor authentication (2FA)
+- Roles & claims management
+- Lockout on failed login attempts
+
+### 🟡 Quick Setup
+
+#### Step 1: Install Packages
+
+```bash
+dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore
+dotnet add package Microsoft.EntityFrameworkCore.SqlServer
+dotnet add package Microsoft.EntityFrameworkCore.Tools
+```
+
+#### Step 2: Create User Model
+
+```csharp
+public class ApplicationUser : IdentityUser<int>
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+}
+```
+
+#### Step 3: Create DbContext
+
+```csharp
+public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+}
+```
+
+#### Step 4: Configure (Program.cs)
+
+```csharp
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
+{
+    // Password settings
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequireUppercase = true;
+
+    // Lockout settings
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+
+    // User settings
+    options.User.RequireUniqueEmail = true;
+    options.SignIn.RequireConfirmedEmail = true;
+})
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+```
+
+#### Step 5: Migrations
+
+```bash
+dotnet ef migrations add InitialIdentity
+dotnet ef database update
+```
+
+#### Step 6: Register & Login
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly IJwtService _jwtService;
+
+    public AuthController(
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        IJwtService jwtService)
+    {
+        _userManager = userManager;
+        _signInManager = signInManager;
+        _jwtService = jwtService;
+    }
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        var user = new ApplicationUser
+        {
+            UserName = request.Email,
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request.LastName
+        };
+
+        var result = await _userManager.CreateAsync(user, request.Password);
+
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors });
+        }
+
+        await _userManager.AddToRoleAsync(user, "User");
+
+        return Ok(new { message = "User registered", userId = user.Id });
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+        {
+            return Unauthorized(new { message = "Invalid credentials" });
+        }
+
+        var result = await _signInManager.CheckPasswordSignInAsync(
+            user, request.Password, lockoutOnFailure: true);
+
+        if (result.IsLockedOut)
+        {
+            return Unauthorized(new { message = "Account locked" });
+        }
+
+        if (!result.Succeeded)
+        {
+            return Unauthorized(new { message = "Invalid credentials" });
+        }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = _jwtService.GenerateAccessToken(
+            user.Id.ToString(), user.Email!, roles);
+
+        return Ok(new { token });
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+        {
+            // Don't reveal user doesn't exist
+            return Ok(new { message = "If email exists, reset link sent" });
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        // TODO: Send email with token
+        return Ok(new { message = "If email exists, reset link sent" });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+        {
+            return BadRequest(new { message = "Invalid request" });
+        }
+
+        var result = await _userManager.ResetPasswordAsync(
+            user, request.Token, request.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors });
+        }
+
+        return Ok(new { message = "Password reset successful" });
+    }
+}
+
+record RegisterRequest(string Email, string Password, string FirstName, string LastName);
+record LoginRequest(string Email, string Password);
+record ForgotPasswordRequest(string Email);
+record ResetPasswordRequest(string Email, string Token, string NewPassword);
+```
+
+**Identity Features:**
+- ✅ Automatic password hashing (bcrypt)
+- ✅ Account lockout after 5 failed attempts
+- ✅ Email confirmation tokens
+- ✅ Password reset tokens
+- ✅ Role management
+- ✅ Claims management
+- ✅ 2FA support
+
+---
+
+## 🔗 OAuth 2.0 & External Providers
+
+### 🟢 What is OAuth?
+
+**OAuth = Login with Google/Facebook/Microsoft**
+
+Instead of creating accounts, users login with existing accounts.
+
+### 🟡 Google Login Setup
+
+#### Step 1: Get Google Credentials
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create project
+3. Enable Google+ API
+4. Create OAuth 2.0 credentials
+5. Set redirect URI: `https://localhost:5001/signin-google`
+6. Copy Client ID & Client Secret
+
+#### Step 2: Install Package
+
+```bash
+dotnet add package Microsoft.AspNetCore.Authentication.Google
+```
+
+#### Step 3: Configure
+
+```csharp
+// appsettings.json
+{
+  "Google": {
+    "ClientId": "your-client-id.apps.googleusercontent.com",
+    "ClientSecret": "your-client-secret"
+  }
+}
+
+// Program.cs
+builder.Services.AddAuthentication()
+    .AddJwtBearer() // Your existing JWT
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Google:ClientId"]!;
+        options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+        options.CallbackPath = "/signin-google";
+    });
+```
+
+#### Step 4: Login Endpoint
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    [HttpGet("google-login")]
+    public IActionResult GoogleLogin()
+    {
+        var properties = new AuthenticationProperties
+        {
+            RedirectUri = "/api/auth/google-callback"
+        };
+        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+
+    [HttpGet("google-callback")]
+    public async Task<IActionResult> GoogleCallback()
+    {
+        var result = await HttpContext.AuthenticateAsync(
+            GoogleDefaults.AuthenticationScheme);
+
+        if (!result.Succeeded)
+        {
+            return Unauthorized();
+        }
+
+        var email = result.Principal.FindFirst(ClaimTypes.Email)?.Value;
+        var name = result.Principal.FindFirst(ClaimTypes.Name)?.Value;
+
+        // TODO: Create or find user in your database
+        // Generate your JWT token
+
+        return Ok(new { email, name });
+    }
+}
+```
+
+**Supported Providers:**
+- Google: `AddGoogle()`
+- Microsoft: `AddMicrosoftAccount()`
+- Facebook: `AddFacebook()`
+- Twitter: `AddTwitter()`
+- GitHub: `AddGitHub()` (requires package)
+
+---
+
+# 🟡 Part 3: Authorization
+
+## 🚪 Authorization Fundamentals
+
+### What is Authorization?
+
+**Authorization = "What can you do?"**
+
+After authentication proves WHO you are, authorization determines WHAT you can access.
+
+### The `[Authorize]` Attribute
+
+```csharp
+// No attribute = Public (anyone can access)
+[HttpGet("public")]
+public IActionResult Public() => Ok("Public");
+
+// [Authorize] = Authenticated users only
+[HttpGet]
+[Authorize]
+public IActionResult Protected() => Ok("Authenticated users only");
+
+// [Authorize(Roles)] = Specific roles
+[HttpDelete("{id}")]
+[Authorize(Roles = "Admin")]
+public IActionResult Delete(int id) => Ok($"Deleted {id}");
+
+// [Authorize(Policy)] = Custom rules
+[HttpPost]
+[Authorize(Policy = "CanCreate")]
+public IActionResult Create() => Ok("Created");
+
+// [AllowAnonymous] = Override controller-level [Authorize]
+[AllowAnonymous]
+[HttpGet("override")]
+public IActionResult Override() => Ok("Anyone can access");
+```
+
+---
+
+## 👥 Role-Based Authorization (RBAC)
+
+### 🟢 What are Roles?
+
+**Role = User category** (Admin, Manager, User, Guest)
+
+### Simple Role Check
+
+```csharp
+[Authorize(Roles = "Admin")]
+public IActionResult AdminOnly() => Ok("Admin access");
+
+// Multiple roles (OR logic - Admin OR Manager)
+[Authorize(Roles = "Admin,Manager")]
+public IActionResult AdminOrManager() => Ok("Admin or Manager");
+
+// Check in code
+[Authorize]
+public IActionResult CheckRole()
+{
+    if (User.IsInRole("Admin"))
+    {
+        return Ok("You are admin");
+    }
+    return Forbid();
+}
+```
+
+### Add Roles to JWT
+
+```csharp
+var claims = new List<Claim>
+{
+    new(ClaimTypes.NameIdentifier, "123"),
+    new(ClaimTypes.Email, "user@test.com"),
+    new(ClaimTypes.Role, "Admin"),   // Role 1
+    new(ClaimTypes.Role, "Manager")  // Role 2
+};
+```
+
+### Role-Based Endpoints Example
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
+{
+    // Anyone authenticated
+    [HttpGet("{id}")]
+    [Authorize]
+    public IActionResult Get(int id) => Ok(new { id, name = "John" });
+
+    // Admins only
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public IActionResult Create([FromBody] User user) => Created("", user);
+
+    // Admins or Managers
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin,Manager")]
+    public IActionResult Update(int id, [FromBody] User user) => Ok(user);
+
+    // Admins only
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    public IActionResult Delete(int id) => NoContent();
+}
+```
+
+---
+
+## 🎫 Claims-Based Authorization
+
+### 🟢 What are Claims?
+
+**Claim = Piece of information about user**
+
+Examples:
+- `{ "email": "user@test.com" }`
+- `{ "department": "IT" }`
+- `{ "subscriptionLevel": "Premium" }`
+
+### Check Claims in Code
+
+```csharp
+[Authorize]
+public IActionResult CheckClaims()
+{
+    // Get claim value
+    var email = User.FindFirst(ClaimTypes.Email)?.Value;
+    var dept = User.FindFirst("department")?.Value;
+
+    // Check if claim exists
+    bool hasPremium = User.HasClaim("subscriptionLevel", "Premium");
+
+    if (hasPremium)
+    {
+        return Ok("Premium feature unlocked");
+    }
+
+    return Forbid("Upgrade to Premium");
+}
+```
+
+### Require Specific Claim
+
+```csharp
+// Program.cs
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("PremiumOnly", policy =>
+        policy.RequireClaim("subscriptionLevel", "Premium"));
+});
+
+// Controller
+[Authorize(Policy = "PremiumOnly")]
+public IActionResult PremiumFeature() => Ok("Premium content");
+```
+
+---
+
+## 📋 Policy-Based Authorization
+
+### 🟢 What are Policies?
+
+**Policy = Custom authorization rules**
+
+Complex logic like: "User must be over 18 AND have verified email"
+
+### Simple Policy
+
+```csharp
+// Program.cs
+builder.Services.AddAuthorization(options =>
+{
+    // Policy: Must have Admin role
+    options.AddPolicy("RequireAdmin", policy =>
+        policy.RequireRole("Admin"));
+
+    // Policy: Must have specific claim
+    options.AddPolicy("RequirePremium", policy =>
+        policy.RequireClaim("subscriptionLevel", "Premium"));
+
+    // Policy: Must be authenticated
+    options.AddPolicy("RequireAuth", policy =>
+        policy.RequireAuthenticatedUser());
+});
+
+// Controller
+[Authorize(Policy = "RequireAdmin")]
+public IActionResult AdminOnly() => Ok();
+```
+
+### 🟡 Advanced: Custom Policy
+
+**Scenario:** Only users over 18 can access
+
+```csharp
+// Requirement
+public class MinimumAgeRequirement : IAuthorizationRequirement
+{
+    public int MinimumAge { get; }
+    public MinimumAgeRequirement(int minimumAge) => MinimumAge = minimumAge;
+}
+
+// Handler
+public class MinimumAgeHandler : AuthorizationHandler<MinimumAgeRequirement>
+{
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        MinimumAgeRequirement requirement)
+    {
+        var dobClaim = context.User.FindFirst(ClaimTypes.DateOfBirth);
+        if (dobClaim == null)
+        {
+            return Task.CompletedTask; // Fail
+        }
+
+        var dob = DateTime.Parse(dobClaim.Value);
+        var age = DateTime.Today.Year - dob.Year;
+
+        if (age >= requirement.MinimumAge)
+        {
+            context.Succeed(requirement);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+// Register
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Over18", policy =>
+        policy.Requirements.Add(new MinimumAgeRequirement(18)));
+});
+builder.Services.AddSingleton<IAuthorizationHandler, MinimumAgeHandler>();
+
+// Use
+[Authorize(Policy = "Over18")]
+public IActionResult AdultContent() => Ok("18+ content");
+```
+
+### 🔴 Advanced: Combine Multiple Requirements
+
+```csharp
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("PremiumAdult", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("subscriptionLevel", "Premium");
+        policy.Requirements.Add(new MinimumAgeRequirement(18));
+    });
+});
+```
+
+---
+
+## 📦 Resource-Based Authorization
+
+### 🟢 What is Resource-Based Auth?
+
+**Check ownership before allowing action**
+
+Example: Users can only edit THEIR OWN documents.
+
+### 🟡 Implementation
+
+```csharp
+// Requirement
+public class DocumentOwnerRequirement : IAuthorizationRequirement { }
+
+// Handler
+public class DocumentOwnerHandler
+    : AuthorizationHandler<DocumentOwnerRequirement, Document>
+{
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        DocumentOwnerRequirement requirement,
+        Document resource)
+    {
+        var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // Check if user owns the document
+        if (resource.OwnerId == userId)
+        {
+            context.Succeed(requirement);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+// Register
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("DocumentOwner", policy =>
+        policy.Requirements.Add(new DocumentOwnerRequirement()));
+});
+builder.Services.AddSingleton<IAuthorizationHandler, DocumentOwnerHandler>();
+
+// Controller
+[ApiController]
+[Route("api/[controller]")]
+public class DocumentsController : ControllerBase
+{
+    private readonly IAuthorizationService _authService;
+
+    public DocumentsController(IAuthorizationService authService)
+    {
+        _authService = authService;
+    }
+
+    [HttpPut("{id}")]
+    [Authorize]
+    public async Task<IActionResult> Update(int id, [FromBody] Document updated)
+    {
+        // Get document from database
+        var document = GetDocument(id); // Your DB call
+
+        // Check authorization
+        var authResult = await _authService.AuthorizeAsync(
+            User, document, "DocumentOwner");
+
+        if (!authResult.Succeeded)
+        {
+            return Forbid(); // 403
+        }
+
+        // Update document
+        return Ok(updated);
+    }
+
+    private Document GetDocument(int id) =>
+        new Document { Id = id, OwnerId = "123", Title = "Doc" };
+}
+
+public class Document
+{
+    public int Id { get; set; }
+    public string OwnerId { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+}
+```
+
+**Use case:** User can edit if:
+- They own the document OR
+- They are Admin
+
+```csharp
+protected override Task HandleRequirementAsync(
+    AuthorizationHandlerContext context,
+    DocumentOwnerRequirement requirement,
+    Document resource)
+{
+    var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    var isAdmin = context.User.IsInRole("Admin");
+
+    if (resource.OwnerId == userId || isAdmin)
+    {
+        context.Succeed(requirement);
+    }
+
+    return Task.CompletedTask;
+}
+```
+
+---
+
+# 🔴 Part 4: Production & Best Practices
+
+## 🔒 API Security Best Practices
+
+### 1. Always Use HTTPS in Production
+
+```csharp
+// Program.cs
+if (app.Environment.IsProduction())
+{
+    app.UseHsts(); // HTTP Strict Transport Security
+    app.UseHttpsRedirection();
+}
+```
+
+### 2. Use Strong Secret Keys
+
+```csharp
+// ❌ NEVER DO THIS
+var key = "MySecretKey123"; // Too short, predictable
+
+// ✅ DO THIS
+var key = "aB3$kL9@mN7#pQ2&vW8!xY5^zC1*dF4%gH6+"; // 32+ chars, random
+
+// ✅ BEST: Use Azure Key Vault or AWS Secrets Manager
+var key = builder.Configuration["KeyVault:JwtSecret"];
+```
+
+### 3. Set Token Expiry
+
+```csharp
+// Access token: Short-lived (15-60 min)
+expires: DateTime.UtcNow.AddMinutes(15)
+
+// Refresh token: Long-lived (7-30 days)
+ExpiresAt = DateTime.UtcNow.AddDays(7)
+```
+
+### 4. Enable CORS Properly
+
+```csharp
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Production", policy =>
+    {
+        policy.WithOrigins("https://yourdomain.com") // Specific origin
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
+app.UseCors("Production");
+```
+
+### 5. Rate Limiting
+
+```csharp
+// .NET 7+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("fixed", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 100; // 100 requests per minute
+    });
+});
+
+app.UseRateLimiter();
+
+// On endpoint
+[EnableRateLimiting("fixed")]
+public IActionResult LimitedEndpoint() => Ok();
+```
+
+### 6. Input Validation
+
+```csharp
+public class RegisterRequest
+{
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(8)]
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$")]
+    public string Password { get; set; } = string.Empty;
+}
+```
+
+### 7. Logging (But Not Secrets!)
+
+```csharp
+// ❌ DON'T log sensitive data
+_logger.LogInformation("User logged in: {Email} with password {Password}", email, password);
+
+// ✅ DO log safely
+_logger.LogInformation("User logged in: {Email}", email);
+_logger.LogWarning("Failed login attempt for: {Email}", email);
+```
+
+---
+
+## ⚠️ Common Security Pitfalls
+
+### Pitfall 1: Storing Secrets in Code
+
+```csharp
+// ❌ NEVER
+var key = "MySecretKey";
+var connectionString = "Server=...;Password=admin123;";
+
+// ✅ ALWAYS use configuration
+var key = _config["Jwt:Key"];
+var connectionString = _config.GetConnectionString("Default");
+```
+
+### Pitfall 2: No HTTPS
+
+```csharp
+// ❌ Tokens sent over HTTP can be intercepted
+RequireHttpsMetadata = false
+
+// ✅ Always require HTTPS
+RequireHttpsMetadata = true
+```
+
+### Pitfall 3: Long Token Expiry
+
+```csharp
+// ❌ Token valid for 30 days - if stolen, attacker has 30 days
+expires: DateTime.UtcNow.AddDays(30)
+
+// ✅ Short-lived access tokens
+expires: DateTime.UtcNow.AddMinutes(15)
+```
+
+### Pitfall 4: Storing JWT in localStorage
+
+```javascript
+// ❌ Vulnerable to XSS attacks
+localStorage.setItem('token', jwt);
+
+// ✅ Use httpOnly cookies
+// Set from server-side
+Response.Cookies.Append("token", jwt, new CookieOptions
+{
+    HttpOnly = true,
+    Secure = true,
+    SameSite = SameSiteMode.Strict
+});
+```
+
+### Pitfall 5: Not Validating Issuer/Audience
+
+```csharp
+// ❌ Anyone can create tokens
+ValidateIssuer = false,
+ValidateAudience = false
+
+// ✅ Validate both
+ValidateIssuer = true,
+ValidIssuer = "https://yourdomain.com",
+ValidateAudience = true,
+ValidAudience = "https://yourdomain.com"
+```
+
+### Pitfall 6: SQL Injection
+
+```csharp
+// ❌ NEVER concatenate user input
+var query = $"SELECT * FROM Users WHERE Email = '{email}'";
+
+// ✅ ALWAYS use parameters
+var query = "SELECT * FROM Users WHERE Email = @Email";
+command.Parameters.AddWithValue("@Email", email);
+
+// ✅ OR use EF Core (safe by default)
+var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+```
+
+### Pitfall 7: No Input Validation
+
+```csharp
+// ❌ Trust user input
+public IActionResult Create(string name) => Ok();
+
+// ✅ Validate input
+public IActionResult Create([Required][MaxLength(100)] string name) => Ok();
+```
+
+---
+
+## 🏢 Multi-Tenant Authorization
+
+### 🟢 What is Multi-Tenant?
+
+**Multiple customers (tenants) share the same application, but data is isolated.**
+
+Example: Slack (each workspace is a tenant)
+
+### 🟡 Tenant Isolation Strategy
+
+```csharp
+// Add tenantId to JWT claims
+var claims = new List<Claim>
+{
+    new(ClaimTypes.NameIdentifier, "123"),
+    new("tenantId", "tenant-456")
+};
+
+// Filter data by tenant
+[Authorize]
+public async Task<IActionResult> GetOrders()
+{
+    var tenantId = User.FindFirst("tenantId")?.Value;
+
+    var orders = await _context.Orders
+        .Where(o => o.TenantId == tenantId)
+        .ToListAsync();
+
+    return Ok(orders);
+}
+```
+
+### 🔴 Advanced: Tenant-Specific Policies
+
+```csharp
+// Requirement
+public class TenantRequirement : IAuthorizationRequirement
+{
+    public string TenantId { get; }
+    public TenantRequirement(string tenantId) => TenantId = tenantId;
+}
+
+// Handler
+public class TenantHandler : AuthorizationHandler<TenantRequirement>
+{
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        TenantRequirement requirement)
+    {
+        var userTenantId = context.User.FindFirst("tenantId")?.Value;
+
+        if (userTenantId == requirement.TenantId)
+        {
+            context.Succeed(requirement);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+// Register
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Tenant1Only", policy =>
+        policy.Requirements.Add(new TenantRequirement("tenant-1")));
+});
+```
+
+---
+
+## 🌍 Real-World Scenarios
+
+### Scenario 1: E-Commerce API
+
+**Requirements:**
+- Customers can view products (no auth)
+- Customers can view THEIR orders (authenticated)
+- Admins can view ALL orders
+- Only Admins can create products
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class ProductsController : ControllerBase
+{
+    // Public - anyone
+    [HttpGet]
+    public IActionResult GetAll() => Ok(new[] { "Product 1", "Product 2" });
+
+    // Admin only
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public IActionResult Create([FromBody] Product product) => Created("", product);
+}
+
+[ApiController]
+[Route("api/[controller]")]
+public class OrdersController : ControllerBase
+{
+    // Customers see THEIR orders, Admins see ALL
+    [HttpGet]
+    [Authorize]
+    public IActionResult GetOrders()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var isAdmin = User.IsInRole("Admin");
+
+        if (isAdmin)
+        {
+            // Return all orders
+            return Ok(new[] { "All orders" });
+        }
+
+        // Return user's orders only
+        return Ok(new[] { $"Orders for user {userId}" });
+    }
+}
+```
+
+### Scenario 2: SaaS Multi-Tenant
+
+**Requirements:**
+- Users belong to organizations (tenants)
+- Users can only see data from THEIR organization
+- Org Admins can manage users in THEIR org
+- Super Admins can manage ANY org
+
+```csharp
+[Authorize]
+public async Task<IActionResult> GetDocuments()
+{
+    var tenantId = User.FindFirst("tenantId")?.Value;
+    var isSuperAdmin = User.IsInRole("SuperAdmin");
+
+    if (isSuperAdmin)
+    {
+        // Super admin sees all tenants
+        return Ok(await _context.Documents.ToListAsync());
+    }
+
+    // Regular users see only their tenant
+    var docs = await _context.Documents
+        .Where(d => d.TenantId == tenantId)
+        .ToListAsync();
+
+    return Ok(docs);
+}
+```
+
+### Scenario 3: Document Sharing
+
+**Requirements:**
+- Owner can edit document
+- Collaborators can view document
+- Anyone with link can view (if public)
+
+```csharp
+public async Task<IActionResult> GetDocument(int id)
+{
+    var doc = await _context.Documents.FindAsync(id);
+    if (doc == null) return NotFound();
+
+    // Public document - anyone
+    if (doc.IsPublic)
+    {
+        return Ok(doc);
+    }
+
+    // Must be authenticated for private docs
+    if (!User.Identity.IsAuthenticated)
+    {
+        return Unauthorized();
+    }
+
+    var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    // Owner or collaborator
+    if (doc.OwnerId == userId ||
+        doc.Collaborators.Contains(userId))
+    {
+        return Ok(doc);
+    }
+
+    return Forbid();
+}
+```
+
+---
+
+## 🔧 Troubleshooting Guide
+
+### Error: "No authentication handler is registered for the scheme 'Bearer'"
+
+**Cause:** Forgot to call `AddAuthentication().AddJwtBearer()`
+
+**Fix:**
+```csharp
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options => { /* config */ });
+```
+
+### Error: "IDX10503: Signature validation failed"
+
+**Cause:** Secret key mismatch between token generation and validation
+
+**Fix:** Use same key for both
+```csharp
+// Generation
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("YourKey"));
+
+// Validation
+IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("YourKey"))
+```
+
+### Error: "IDX10223: Lifetime validation failed"
+
+**Cause:** Token expired
+
+**Fix:** Generate new token or use refresh token
+
+### Always Get 401 Unauthorized
+
+**Check:**
+1. Is `UseAuthentication()` called before `UseAuthorization()`?
+2. Is token sent in header: `Authorization: Bearer <token>`?
+3. Is token expired? Check `exp` claim
+4. Is secret key correct?
+
+### Always Get 403 Forbidden
+
+**Cause:** Authenticated but not authorized (missing role/claim)
+
+**Check:**
+1. Does user have required role?
+2. Does token contain correct claims?
+3. Is policy configured correctly?
+
+---
+
+# 📖 Appendix
+
+## 🌳 Decision Trees
+
+### Choose Authentication Method
+
+```
+What are you building?
+├─ Mobile App → JWT
+├─ SPA (React/Vue/Angular) → JWT
+├─ Traditional Web App (MVC) → Cookie
+├─ Microservices → JWT
+└─ Public API → JWT
+```
+
+### Choose Authorization Method
+
+```
+Authorization requirement?
+├─ Simple role check → [Authorize(Roles = "Admin")]
+├─ Check user property → Claims-based
+├─ Complex logic (multiple conditions) → Policy-based
+└─ Resource ownership → Resource-based authorization
+```
+
+---
+
+## 🧪 Testing Strategies
+
+### Unit Test JWT Generation
+
+```csharp
+[Fact]
+public void GenerateToken_ReturnsValidJwt()
+{
+    // Arrange
+    var config = new ConfigurationBuilder()
+        .AddInMemoryCollection(new Dictionary<string, string>
+        {
+            {"Jwt:Key", "TestKey32CharactersLongForTesting!"},
+            {"Jwt:Issuer", "TestIssuer"},
+            {"Jwt:Audience", "TestAudience"}
+        })
+        .Build();
+
+    var jwtService = new JwtService(config);
+
+    // Act
+    var token = jwtService.GenerateAccessToken("123", "test@test.com", new[] { "User" });
+
+    // Assert
+    Assert.NotNull(token);
+    Assert.Contains(".", token); // JWT has dots
+}
+```
+
+### Integration Test Protected Endpoint
+
+```csharp
+[Fact]
+public async Task ProtectedEndpoint_WithoutToken_Returns401()
+{
+    // Arrange
+    var client = _factory.CreateClient();
+
+    // Act
+    var response = await client.GetAsync("/api/products");
+
+    // Assert
+    Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+}
+
+[Fact]
+public async Task ProtectedEndpoint_WithToken_Returns200()
+{
+    // Arrange
+    var client = _factory.CreateClient();
+    var token = GetValidToken(); // Your helper method
+
+    client.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue("Bearer", token);
+
+    // Act
+    var response = await client.GetAsync("/api/products");
+
+    // Assert
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+}
+```
+
+---
+
+## ✅ Deployment Checklist
+
+### Before Production
+
+- [ ] Move secrets to Azure Key Vault / AWS Secrets Manager
+- [ ] Enable HTTPS (RequireHttpsMetadata = true)
+- [ ] Set short token expiry (15-30 min access tokens)
+- [ ] Implement refresh tokens
+- [ ] Enable rate limiting
+- [ ] Add logging (without sensitive data)
+- [ ] Enable CORS with specific origins
+- [ ] Validate all user input
+- [ ] Use parameterized queries (prevent SQL injection)
+- [ ] Test with real SSL certificate
+- [ ] Enable HSTS
+- [ ] Set up monitoring/alerts
+- [ ] Document API endpoints
+- [ ] Load test authentication endpoints
+
+### Security Checklist
+
+- [ ] No secrets in code
+- [ ] Strong random secret keys (32+ characters)
+- [ ] HTTPS everywhere
+- [ ] HttpOnly cookies
+- [ ] SameSite cookie policy
+- [ ] Input validation on all endpoints
+- [ ] SQL injection prevention
+- [ ] XSS protection
+- [ ] CSRF protection
+- [ ] Rate limiting
+- [ ] Account lockout after failed attempts
+- [ ] Password complexity requirements
+- [ ] Email confirmation
+- [ ] 2FA option for admins
+
+---
+
+## 🎯 Summary
+
+### Authentication Methods
+
+| Method | Use Case | Pros | Cons |
+|--------|----------|------|------|
+| **JWT** | APIs, Mobile, SPAs | Stateless, scalable | Can't revoke easily |
+| **Cookie** | Traditional web apps | Simple, secure by default | Requires server-side state |
+| **OAuth** | Social login | Easy for users | Dependency on provider |
+| **Identity** | Full user management | Everything included | Complex setup |
+
+### Authorization Methods
+
+| Method | Use Case | Example |
+|--------|----------|---------|
+| **Role-Based** | Simple permissions | Admin, User, Manager |
+| **Claims-Based** | User properties | Department, Subscription |
+| **Policy-Based** | Complex rules | Age > 18 AND verified email |
+| **Resource-Based** | Ownership | User can edit THEIR documents |
+
+### Key Takeaways
+
+1. **Authentication** = WHO you are (login)
+2. **Authorization** = WHAT you can do (permissions)
+3. **JWT** = Best for APIs and mobile
+4. **Cookies** = Best for traditional web apps
+5. **Short-lived access tokens** (15 min) + long-lived refresh tokens (7 days)
+6. **Never store secrets in code** - use Key Vault
+7. **Always use HTTPS** in production
+8. **Validate input** to prevent attacks
+9. **Test authentication flows** thoroughly
+10. **Monitor and log** security events
+
+---
+
+**🎉 You've completed the guide!**
+
+You now know:
+- ✅ Authentication (JWT, Cookies, Identity, OAuth)
+- ✅ Authorization (Roles, Claims, Policies, Resource-based)
+- ✅ Security best practices
+- ✅ Production deployment
+- ✅ Real-world scenarios
+- ✅ Troubleshooting
+
+**Next steps:**
+1. Build a sample project using what you learned
+2. Implement authentication in your real application
+3. Add authorization based on your requirements
+4. Deploy to production with proper security
+
+**Happy coding! 🚀**
